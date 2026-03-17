@@ -32,6 +32,7 @@
       <div class="dtab" :class="{ active: activeTab === 'network' }" @click="activeTab = 'network'">Network</div>
       <div class="dtab" :class="{ active: activeTab === 'processes' }" @click="activeTab = 'processes'">Processes</div>
       <div class="dtab" :class="{ active: activeTab === 'terminal' }" @click="activeTab = 'terminal'">Terminal</div>
+      <div class="dtab" :class="{ active: activeTab === 'apps' }" @click="activeTab = 'apps'">Apps</div>
       <div class="dtab" :class="{ active: activeTab === 'info' }" @click="activeTab = 'info'">Properties</div>
     </div>
 
@@ -174,6 +175,39 @@
         <ServerTerminal :server="srv" />
       </div>
 
+      <div v-if="activeTab === 'apps'" class="tab-pane">
+        <div class="apps-list">
+          <div class="section-hdr" style="padding: 12px 12px 6px">System Applications</div>
+          <div v-for="app in managedApps" :key="app.id" class="app-item">
+            <div class="app-icon" :style="{ background: app.color + '1a', color: app.color }">
+              <span v-if="app.id === 'nginx'">NG</span>
+              <span v-else-if="app.id === 'redis'">RD</span>
+              <span v-else-if="app.id === 'dotnet'">.NET</span>
+            </div>
+            <div class="app-info">
+              <div class="app-name">{{ app.name }}</div>
+              <div class="app-desc">{{ app.description }}</div>
+            </div>
+            <div class="app-status">
+              <span v-if="systemAppStatuses[app.id] === 'active'" class="status-pill active">Installed</span>
+              <span v-else-if="installing[app.id]" class="status-pill loading">Installing...</span>
+              <span v-else class="status-pill inactive">Not Installed</span>
+            </div>
+            <button 
+              class="btn btn-ghost btn-sm" 
+              v-if="systemAppStatuses[app.id] !== 'active'"
+              :disabled="installing[app.id]"
+              @click="installSystemApp(app.id)"
+            >
+              Install
+            </button>
+            <span v-else class="installed-check">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="3,8 6,11 13,4"/></svg>
+            </span>
+          </div>
+        </div>
+      </div>
+
       <div v-if="activeTab === 'info'" class="tab-pane">
         <div class="props-list">
           <div class="prop-item">
@@ -207,6 +241,14 @@ const activeTab = ref('resources')
 const sysInfo = ref(null)
 const pingStatus = ref('sdot-x')
 const stats = computed(() => sysInfo.value?.stats)
+
+const managedApps = [
+  { id: 'nginx', name: 'Nginx', description: 'Web server & Reverse Proxy', color: 'var(--accent)' },
+  { id: 'redis', name: 'Redis', description: 'In-memory data store', color: 'var(--danger)' },
+  { id: 'dotnet', name: '.NET SDK', description: 'v8.0 Runtime & SDK', color: 'var(--purple)' }
+]
+const systemAppStatuses = ref({ nginx: 'unknown', redis: 'unknown', dotnet: 'unknown' })
+const installing = ref({ nginx: false, redis: false, dotnet: false })
 
 const ramPercent = computed(() => {
   if (!stats.value?.ramTotal) return 0
@@ -246,6 +288,36 @@ const fetchStaticInfo = async () => {
     sysInfo.value = { ...sysInfo.value, ...data }
   } catch (e) {
     console.error('Failed to fetch static info', e)
+  }
+}
+
+const fetchSystemApps = async () => {
+  try {
+    const statuses = await nuxtApp.$apiFetch(`/api/system-apps/${props.srv.id}/status`, {
+      baseURL: config.public.apiBase,
+      headers: auth.authHeaders()
+    })
+    systemAppStatuses.value = statuses
+  } catch (e) {
+    console.error('Failed to fetch system apps status', e)
+  }
+}
+
+const installSystemApp = async (appId) => {
+  if (installing.value[appId]) return
+  installing.value[appId] = true
+  try {
+    await nuxtApp.$apiFetch(`/api/system-apps/${props.srv.id}/install/${appId}`, {
+      method: 'POST',
+      baseURL: config.public.apiBase,
+      headers: auth.authHeaders()
+    })
+    // Polling will update the status eventually
+    setTimeout(fetchSystemApps, 5000)
+  } catch (e) {
+    alert(`Failed to trigger ${appId} installation`)
+  } finally {
+    installing.value[appId] = false
   }
 }
 
@@ -295,6 +367,10 @@ const fetchRealtime = async () => {
       sysInfo.value = { ...sysInfo.value, stats: { ...sysInfo.value?.stats, ...data } }
     } else if (activeTab.value === 'processes') {
       sysInfo.value = { ...sysInfo.value, stats: { ...sysInfo.value?.stats, processes: data } }
+    }
+
+    if (activeTab.value === 'apps') {
+      await fetchSystemApps()
     }
 
     pingStatus.value = 'sdot-g'
@@ -440,4 +516,24 @@ watch(activeTab, () => {
 .sdot-x { background: var(--text3); }
 
 .rpill { font-size: 9px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; padding: 1px 6px; border-radius: 99px; background: rgba(0,201,167,0.12); color: var(--accent); }
+
+.apps-list { display: flex; flex-direction: column; gap: 4px; padding-bottom: 20px; }
+.app-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); transition: background 0.2s; }
+.app-item:hover { background: var(--bg2); }
+.app-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+.app-info { flex: 1; min-width: 0; }
+.app-name { font-size: 13px; font-weight: 600; color: var(--text1); }
+.app-desc { font-size: 11px; color: var(--text3); }
+.app-status { margin: 0 12px; }
+.status-pill { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+.status-pill.active { background: rgba(0, 201, 167, 0.1); color: var(--accent); }
+.status-pill.inactive { background: var(--bg3); color: var(--text3); }
+.status-pill.loading { background: rgba(240, 165, 0, 0.1); color: var(--warn); animation: pulse 1.5s infinite; }
+.installed-check { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 </style>

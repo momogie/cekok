@@ -164,8 +164,21 @@ onMounted(() => {
 .fill-high { background: var(--danger); }
 .mini-pct { font-size: 9px; font-family: var(--mono); color: var(--text3); width: 26px; text-align: right; }
 
-.row-actions { display: none; align-items: center; gap: 4px; position: absolute; right: 8px; background: var(--bg1); padding-left: 8px; }
-.server-row:hover .row-actions, .server-row.selected .row-actions { display: flex; }
-.btn-tool { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; border-radius: 4px; }
+.row-actions { 
+  display: flex; 
+  align-items: center; 
+  gap: 4px; 
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.2s ease-in-out;
+  flex-shrink: 0;
+}
+.server-row:hover .row-actions, .server-row.selected .row-actions { 
+  width: 46px; /* Approximate width for two small buttons */
+  opacity: 1;
+  margin-left: 8px;
+}
+.btn-tool { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; border-radius: 4px; flex-shrink: 0; }
 .btn-tool:hover { color: var(--text1); background: var(--bg2); }
 </style>

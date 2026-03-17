@@ -208,7 +208,7 @@ const deleteServer = async (id) => {
 .stat-val.warn { color: var(--warn); }
 
 /* Grid Layout */
-.grid-main { display: grid; grid-template-columns: 1fr 420px; gap: 12px; flex: 1; min-height: 0; }
+.grid-main { display: grid; grid-template-columns: 1fr 550px; gap: 12px; flex: 1; min-height: 0; }
 
 .panel {
   background: var(--bg1); border: 1px solid var(--border);

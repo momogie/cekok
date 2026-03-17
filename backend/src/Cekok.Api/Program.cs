@@ -54,6 +54,7 @@ builder.Services.AddScoped<SshService>();
 builder.Services.AddScoped<ScpService>();
 builder.Services.AddScoped<BuildService>();
 builder.Services.AddScoped<NginxService>();
+builder.Services.AddScoped<SystemAppService>();
 builder.Services.AddScoped<EncryptionService>();
 builder.Services.AddScoped<HealthCheckService>();
 
@@ -126,6 +127,8 @@ api.MapGroup("/applications").MapApplicationsEndpoints().RequireAuthorization();
 api.MapGroup("/deploy").MapDeployEndpoints().RequireAuthorization();
 // Nginx endpoints
 api.MapGroup("/nginx").MapNginxEndpoints().RequireAuthorization();
+// System Apps endpoints
+api.MapGroup("/system-apps").MapSystemAppsEndpoints().RequireAuthorization();
 // Schedule endpoints
 api.MapGroup("/schedule").MapScheduleEndpoints().RequireAuthorization();
 
