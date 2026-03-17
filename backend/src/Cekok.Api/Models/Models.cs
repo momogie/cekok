@@ -60,6 +60,7 @@ public class Server
     [Required] public string SshUser { get; set; } = "";
     [Required] public string SshPasswordEnc { get; set; } = "";
     [Required] public string Role { get; set; } = "app-server"; // master | app-server | proxy | db-server
+    public string? Hostname { get; set; }
     public string? Tags { get; set; } // JSON array
     public bool NginxInstalled { get; set; } = false;
     public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("O");

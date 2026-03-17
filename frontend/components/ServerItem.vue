@@ -12,7 +12,10 @@
         {{ srv.name }}
         <span class="role-pill" :class="'role-' + roleClass">{{ srv.role }}</span>
       </div>
-      <div class="srv-meta">{{ srv.ip }} · {{ srv.tags || 'default' }}</div>
+      <div class="srv-meta" :title="srv.hostname ? srv.hostname + ' (' + srv.ip + ')' : srv.ip">
+        <span v-if="srv.hostname" class="srv-hostname">{{ srv.hostname }} · </span>
+        {{ srv.ip }} · {{ srv.tags || 'default' }}
+      </div>
     </div>
 
     <div class="srv-res">

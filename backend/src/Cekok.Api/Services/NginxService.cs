@@ -22,8 +22,10 @@ public class NginxService(CekokDbContext db, SshService sshSvc, EncryptionServic
         var server = await db.Servers.FindAsync([serverId], ct)
             ?? throw new KeyNotFoundException("Server not found");
         var pw = encSvc.Decrypt(server.SshPasswordEnc);
+        var sudoPrefix = server.SshUser == "root" ? "" : $"echo '{pw.Replace("'", "'\\''")}' | sudo -S ";
+        
         await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, pw,
-            "apt-get update -qq && apt-get install -y nginx && systemctl enable nginx", ct);
+            $"{sudoPrefix}apt-get update -qq && {sudoPrefix}apt-get install -y nginx && {sudoPrefix}systemctl enable nginx", ct);
         server.NginxInstalled = true;
         await db.SaveChangesAsync(ct);
     }
@@ -33,8 +35,10 @@ public class NginxService(CekokDbContext db, SshService sshSvc, EncryptionServic
         var server = await db.Servers.FindAsync([serverId], ct)
             ?? throw new KeyNotFoundException("Server not found");
         var pw = encSvc.Decrypt(server.SshPasswordEnc);
+        var sudoPrefix = server.SshUser == "root" ? "" : $"echo '{pw.Replace("'", "'\\''")}' | sudo -S ";
+        
         await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, pw,
-            "nginx -t && systemctl reload nginx", ct);
+            $"{sudoPrefix}nginx -t && {sudoPrefix}systemctl reload nginx", ct);
     }
 
     public async Task DeployConfigAsync(string serverId, string siteName,
@@ -47,10 +51,12 @@ public class NginxService(CekokDbContext db, SshService sshSvc, EncryptionServic
         // Write config to remote
         var remotePath = $"/etc/nginx/sites-available/{siteName}";
         var escapedContent = content.Replace("'", "'\\''");
+        var sudoPrefix = server.SshUser == "root" ? "" : $"echo '{pw.Replace("'", "'\\''")}' | sudo -S ";
+        
         await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, pw,
-            $"echo '{escapedContent}' > {remotePath} && " +
-            $"ln -sf {remotePath} /etc/nginx/sites-enabled/{siteName} && " +
-            $"nginx -t && systemctl reload nginx", ct);
+            $"echo '{escapedContent}' | {sudoPrefix}tee {remotePath} > /dev/null && " +
+            $"{sudoPrefix}ln -sf {remotePath} /etc/nginx/sites-enabled/{siteName} && " +
+            $"{sudoPrefix}nginx -t && {sudoPrefix}systemctl reload nginx", ct);
 
         // Save snapshot
         var existing = await db.NginxConfigs

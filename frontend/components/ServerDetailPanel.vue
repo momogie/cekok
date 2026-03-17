@@ -2,7 +2,11 @@
   <div class="detail-content">
     <div class="det-hdr">
       <div class="det-name"><div class="sdot" :class="pingStatus"></div>{{ srv.name }}<span class="rpill">{{ srv.role }}</span></div>
-      <div class="det-meta">{{ srv.ip }} · {{ sysInfo?.cpuCores || '?' }} vCPU · {{ stats?.ramTotal ? Math.round(stats.ramTotal / 1024) + ' GB' : '...' }}</div>
+      <div class="det-meta">
+        <span v-if="srv.hostname">{{ srv.hostname }}</span>
+        <span v-else>{{ srv.ip }}</span>
+        · {{ sysInfo?.cpuCores || '?' }} vCPU · {{ stats?.ramTotal ? Math.round(stats.ramTotal / 1024) + ' GB' : '...' }}
+      </div>
       <div class="det-row">
         <span class="upbadge">
           <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10,10"/></svg>

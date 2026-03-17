@@ -117,9 +117,10 @@ public class DeployService(
 
             if (!string.IsNullOrEmpty(target.ServiceName))
             {
-                await log(server.Id, "cmd", $"$ ssh {server.SshUser}@{server.Ip} systemctl restart {target.ServiceName}");
+                var sudoPrefix = server.SshUser == "root" ? "" : $"echo '{password.Replace("'", "'\\''")}' | sudo -S ";
+                await log(server.Id, "cmd", $"$ ssh {server.SshUser}@{server.Ip} sudo systemctl restart {target.ServiceName}");
                 await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                    $"systemctl restart {target.ServiceName}");
+                    $"{sudoPrefix}systemctl restart {target.ServiceName}");
                 await Task.Delay(3000);
             }
 
@@ -145,8 +146,11 @@ public class DeployService(
                 await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
                     $"rm -rf {target.DeployDir}; mv {backupDir} {target.DeployDir}");
                 if (!string.IsNullOrEmpty(target.ServiceName))
+                {
+                    var sudoPrefix = server.SshUser == "root" ? "" : $"echo '{password.Replace("'", "'\\''")}' | sudo -S ";
                     await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                        $"systemctl restart {target.ServiceName}");
+                        $"{sudoPrefix}systemctl restart {target.ServiceName}");
+                }
                 await log(server.Id, "warn", "✓ Rollback complete");
             }
             catch (Exception rex)

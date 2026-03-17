@@ -50,11 +50,13 @@ public class SystemAppService(CekokDbContext db, SshService sshSvc, EncryptionSe
             ?? throw new KeyNotFoundException("Server not found");
         var pw = encSvc.Decrypt(server.SshPasswordEnc);
 
+        var sudoPrefix = server.SshUser == "root" ? "" : $"echo '{pw.Replace("'", "'\\''")}' | sudo -S ";
+        
         string command = appId.ToLower() switch
         {
-            "nginx" => "apt-get update -qq && apt-get install -y nginx && systemctl enable --now nginx",
-            "redis" => "apt-get update -qq && apt-get install -y redis-server && systemctl enable --now redis-server",
-            "dotnet" => "apt-get update -qq && apt-get install -y dotnet-sdk-8.0",
+            "nginx" => $"{sudoPrefix}apt-get update -qq && {sudoPrefix}apt-get install -y nginx && {sudoPrefix}systemctl enable --now nginx",
+            "redis" => $"{sudoPrefix}apt-get update -qq && {sudoPrefix}apt-get install -y redis-server && {sudoPrefix}systemctl enable --now redis-server",
+            "dotnet" => $"{sudoPrefix}apt-get update -qq && {sudoPrefix}apt-get install -y dotnet-sdk-8.0",
             _ => throw new ArgumentException("Invalid App ID")
         };
 

@@ -83,7 +83,20 @@ public static class ServersController
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
             var ok = await ssh.TestConnectionAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, ct);
-            return Results.Ok(new { connected = ok });
+            
+            if (ok)
+            {
+                try {
+                    var hostname = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "hostname", ct)).Trim();
+                    if (srv.Hostname != hostname)
+                    {
+                        srv.Hostname = hostname;
+                        await db.SaveChangesAsync(ct);
+                    }
+                } catch { /* ignore if hostname fetch fails but connection was ok */ }
+            }
+
+            return Results.Ok(new { connected = ok, hostname = srv.Hostname });
         });
 
         group.MapGet("/{id}/sys-info", async (
@@ -95,6 +108,13 @@ public static class ServersController
 
             try {
                 var hostname = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "hostname", ct)).Trim();
+                
+                if (srv.Hostname != hostname)
+                {
+                    srv.Hostname = hostname;
+                    await db.SaveChangesAsync(ct);
+                }
+
                 var cpuModel = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs", ct)).Trim();
                 var cpuCount = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "nproc", ct)).Trim();
                 var uptime = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "uptime -p", ct)).Trim();
