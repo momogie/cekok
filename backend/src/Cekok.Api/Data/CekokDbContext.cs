@@ -15,6 +15,7 @@ public class CekokDbContext(DbContextOptions<CekokDbContext> options) : DbContex
     public DbSet<DeployJob> DeployJobs => Set<DeployJob>();
     public DbSet<DeployLog> DeployLogs => Set<DeployLog>();
     public DbSet<NginxConfig> NginxConfigs => Set<NginxConfig>();
+    public DbSet<AppSettingFile> AppSettingFiles => Set<AppSettingFile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +52,11 @@ public class CekokDbContext(DbContextOptions<CekokDbContext> options) : DbContex
         modelBuilder.Entity<DeployLog>(e =>
         {
             e.HasOne<DeployJob>().WithMany().HasForeignKey(d => d.JobId);
+        });
+
+        modelBuilder.Entity<AppSettingFile>(e =>
+        {
+            e.HasOne<Application>().WithMany().HasForeignKey(f => f.AppId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

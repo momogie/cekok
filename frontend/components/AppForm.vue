@@ -18,7 +18,7 @@
       <!-- Step Indicator -->
       <div class="modal-steps" v-if="!success">
         <div 
-          v-for="i in 5" 
+          v-for="i in totalSteps" 
           :key="i"
           class="mstep" 
           :class="{ active: currentStep === i, done: currentStep > i }"
@@ -30,7 +30,7 @@
             <template v-else>{{ i }}</template>
           </div>
           <span class="mstep-label">{{ stepLabels[i-1] }}</span>
-          <div v-if="i < 5" class="mstep-sep"></div>
+          <div v-if="i < totalSteps" class="mstep-sep"></div>
         </div>
       </div>
 
@@ -115,23 +115,62 @@
                 <label class="form-label">Build output dir</label>
                 <input v-model="form.outputDir" class="form-input" :placeholder="currentType?.outputDir">
               </div>
-              <div class="form-group">
-                <label class="form-label">Deploy target dir <span>*</span></label>
-                <input v-model="form.deployDir" class="form-input" placeholder="/var/www/my-app">
+            </div>
+
+            <!-- Deploy targets: multi-server -->
+            <div class="msec-label" style="margin-top:20px">
+              Deploy targets
+              <span class="target-badge">{{ form.deployTargets.length }} server{{ form.deployTargets.length !== 1 ? 's' : '' }}</span>
+            </div>
+
+            <div v-if="serversCtx.loading" class="servers-loading">Loading servers…</div>
+            <div v-else-if="serversCtx.servers.length === 0" class="servers-empty">No servers registered yet.</div>
+            <div v-else class="server-target-list">
+              <div
+                v-for="srv in serversCtx.servers"
+                :key="srv.id"
+                class="server-target-item"
+                :class="{ selected: isTargetServer(srv.id) }"
+              >
+                <!-- Header row: toggle + server info -->
+                <div class="sti-header" @click="toggleTargetServer(srv.id)">
+                  <div class="sti-check" :class="{ checked: isTargetServer(srv.id) }">
+                    <svg v-if="isTargetServer(srv.id)" width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                  <div class="sti-info">
+                    <div class="sti-name">{{ srv.name }}</div>
+                    <div class="sti-ip">{{ srv.ip }} · {{ srv.role }}</div>
+                  </div>
+                  <div v-if="isTargetServer(srv.id)" class="sti-configured">configured ✓</div>
+                </div>
+
+                <!-- Per-server config (only when selected) -->
+                <div v-if="isTargetServer(srv.id)" class="sti-config">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Deploy dir <span>*</span></label>
+                      <input v-model="getTarget(srv.id).deployDir" class="form-input form-input-sm" placeholder="/var/www/my-app">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Service name</label>
+                      <input v-model="getTarget(srv.id).serviceName" class="form-input form-input-sm" placeholder="my-app">
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Port</label>
+                      <input v-model="getTarget(srv.id).port" class="form-input form-input-sm" type="number" placeholder="5000">
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Health check URL</label>
+                      <input v-model="getTarget(srv.id).healthCheckUrl" class="form-input form-input-sm" placeholder="http://localhost:5000/health">
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="msec-label">Service (systemd)</div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Service name <span>*</span></label>
-                <input v-model="form.serviceName" class="form-input" placeholder="my-app">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Port</label>
-                <input v-model="form.port" class="form-input" type="number" placeholder="5000">
-              </div>
-            </div>
-            <div class="msec-label">Environment variables</div>
+
+            <div class="msec-label" style="margin-top:20px">Environment variables</div>
             <div class="env-list">
               <div v-for="(ev, i) in form.envVars" :key="i" class="env-row">
                 <input v-model="ev.key" class="form-input" placeholder="KEY">
@@ -145,8 +184,27 @@
             </button>
           </div>
 
-          <!-- Step 4: Schedule -->
+          <!-- Step 4: Settings -->
           <div v-if="currentStep === 4" class="step-panel">
+            <div class="msec-label">Config Files</div>
+            <div class="form-hint" style="margin-bottom:12px;">Create config files (e.g. appsettings.json) that will be written to the app root directory during deploy.</div>
+            <div class="setting-files-list">
+              <div v-for="(sf, i) in form.settingFiles" :key="i" class="setting-file-row">
+                <div class="setting-file-header">
+                  <input v-model="sf.filePath" class="form-input form-input-sm" placeholder="e.g. appsettings.json or google/fcm.json">
+                  <button class="env-del" @click="removeSettingFile(i)">×</button>
+                </div>
+                <textarea v-model="sf.content" class="form-input form-textarea" placeholder="File content..."></textarea>
+              </div>
+            </div>
+            <button class="add-row-btn" @click="addSettingFile">
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Add config file
+            </button>
+          </div>
+
+          <!-- Step 5: Schedule -->
+          <div v-if="currentStep === 5" class="step-panel">
             <div class="msec-label">Auto-deploy schedule</div>
             <div class="form-group">
               <div class="toggle-row" @click="form.scheduleEnabled = !form.scheduleEnabled">
@@ -182,8 +240,8 @@
             </div>
           </div>
 
-          <!-- Step 5: Review -->
-          <div v-if="currentStep === 5" class="step-panel">
+          <!-- Step 6: Review -->
+          <div v-if="currentStep === 6" class="step-panel">
             <div class="review-section-title">Application</div>
             <div class="review-block">
               <div class="review-row"><span class="review-key">Name</span><span class="review-val accent">{{ form.name }}</span></div>
@@ -194,11 +252,23 @@
               <div class="review-row"><span class="review-key">Repo</span><span class="review-val">{{ form.repoUrl }}</span></div>
               <div class="review-row"><span class="review-key">Branch</span><span class="review-val">{{ form.branch }}</span></div>
             </div>
-            <div class="review-section-title">Build & Deploy</div>
+            <div class="review-section-title">Build</div>
             <div class="review-block">
               <div class="review-row"><span class="review-key">Build cmd</span><span class="review-val">{{ form.buildCmd || currentType?.buildCmd }}</span></div>
-              <div class="review-row"><span class="review-key">Deploy to</span><span class="review-val accent">{{ form.deployDir }}</span></div>
-              <div class="review-row"><span class="review-key">Service</span><span class="review-val">{{ form.serviceName }}</span></div>
+              <div class="review-row"><span class="review-key">Output dir</span><span class="review-val">{{ form.outputDir || currentType?.outputDir || '—' }}</span></div>
+            </div>
+            <div class="review-section-title">Deploy targets ({{ form.deployTargets.length }})</div>
+            <div v-if="form.deployTargets.length === 0" class="review-block">
+              <div class="review-row" style="color:var(--text3)">No servers selected</div>
+            </div>
+            <div v-for="t in form.deployTargets" :key="t.serverId" class="review-block" style="margin-bottom:6px">
+              <div class="review-row">
+                <span class="review-key">Server</span>
+                <span class="review-val accent">{{ serverName(t.serverId) }}</span>
+              </div>
+              <div class="review-row"><span class="review-key">Deploy dir</span><span class="review-val">{{ t.deployDir || '—' }}</span></div>
+              <div class="review-row"><span class="review-key">Service</span><span class="review-val">{{ t.serviceName || '—' }}</span></div>
+              <div class="review-row" v-if="t.port"><span class="review-key">Port</span><span class="review-val">{{ t.port }}</span></div>
             </div>
           </div>
         </template>
@@ -212,7 +282,7 @@
           :disabled="loading" 
           @click="nextStep"
         >
-          {{ currentStep === 5 ? (app ? '✓ Update App' : '✓ Create App') : 'Continue →' }}
+          {{ currentStep === totalSteps ? (app ? '✓ Update App' : '✓ Create App') : 'Continue →' }}
         </button>
       </div>
     </div>
@@ -228,6 +298,7 @@ const emit = defineEmits(['close', 'saved'])
 const loading = ref(false)
 const success = ref(false)
 const currentStep = ref(1)
+const totalSteps = 6
 
 const APP_TYPES = [
   { id:'dotnet', icon:'.NT', cls:'icon-dotnet', name:'.NET / C#',   desc:'ASP.NET Core API, Worker, Blazor',    buildCmd:'dotnet publish -c Release -o ./publish', outputDir:'publish/' },
@@ -246,7 +317,10 @@ const CRON_PRESETS = [
   {label:'Hourly',      val:'0 * * * *'},
 ]
 
-const stepLabels = ['App Type', 'Repository', 'Build', 'Schedule', 'Review']
+const stepLabels = ['App Type', 'Repository', 'Build', 'Settings', 'Schedule', 'Review']
+
+// ── Deploy targets per-server ──────────────────────────────────────────
+// Each entry: { serverId, deployDir, serviceName, port, healthCheckUrl }
 
 const form = ref({
   type: props.app?.type || 'dotnet',
@@ -257,19 +331,59 @@ const form = ref({
   token: '',
   buildCmd: props.app?.buildCmd || '',
   outputDir: props.app?.outputDir || '',
-  deployDir: '',
-  serviceName: '',
-  port: '',
   envVars: [{ key: '', val: '' }],
+  settingFiles: [],
   scheduleEnabled: props.app?.scheduleEnabled || false,
-  scheduleCron: props.app?.scheduleCron || '0 2 * * *'
+  scheduleCron: props.app?.scheduleCron || '0 2 * * *',
+  /** @type {{ serverId: string, deployDir: string, serviceName: string, port: string, healthCheckUrl: string }[]} */
+  deployTargets: [],
 })
+
+// Load servers and settings when component mounts
+const serversCtx = useServers()
+onMounted(async () => {
+  serversCtx.fetchServers()
+  if (props.app) {
+    try {
+      const config = useRuntimeConfig()
+      const auth = useAuth()
+      const s = await $fetch(`${config.public.apiBase}/api/applications/${props.app.id}/settings`, { 
+        headers: auth.authHeaders() 
+      })
+      if (s && s.length > 0) form.value.settingFiles = s
+    } catch (e) { console.error('Failed to load settings', e) }
+  }
+})
+
+const isTargetServer = (serverId) =>
+  form.value.deployTargets.some(t => t.serverId === serverId)
+
+const getTarget = (serverId) => {
+  let t = form.value.deployTargets.find(t => t.serverId === serverId)
+  if (!t) {
+    t = { serverId, deployDir: '', serviceName: '', port: '', healthCheckUrl: '' }
+    form.value.deployTargets.push(t)
+  }
+  return t
+}
+
+const toggleTargetServer = (serverId) => {
+  const idx = form.value.deployTargets.findIndex(t => t.serverId === serverId)
+  if (idx === -1) {
+    form.value.deployTargets.push({ serverId, deployDir: '', serviceName: '', port: '', healthCheckUrl: '' })
+  } else {
+    form.value.deployTargets.splice(idx, 1)
+  }
+}
+
+const serverName = (serverId) =>
+  serversCtx.servers.find(s => s.id === serverId)?.name ?? serverId
 
 const cronParts = ref(form.value.scheduleCron.split(' '))
 
 const currentType = computed(() => APP_TYPES.find(t => t.id === form.value.type))
 
-const footerHint = computed(() => `Step ${currentStep.value} of 5 — ${stepLabels[currentStep.value-1].toLowerCase()}`)
+const footerHint = computed(() => `Step ${currentStep.value} of ${totalSteps} — ${stepLabels[currentStep.value-1].toLowerCase()}`)
 
 const selectType = (id) => {
   form.value.type = id
@@ -282,6 +396,9 @@ const selectType = (id) => {
 
 const addEnvVar = () => form.value.envVars.push({ key: '', val: '' })
 const removeEnvVar = (i) => form.value.envVars.splice(i, 1)
+
+const addSettingFile = () => form.value.settingFiles.push({ filePath: '', content: '' })
+const removeSettingFile = (i) => form.value.settingFiles.splice(i, 1)
 
 const applyCronPreset = (val) => {
   form.value.scheduleCron = val
@@ -305,7 +422,7 @@ const humanizeCron = (cron) => {
 }
 
 const nextStep = () => {
-  if (currentStep.value < 5) {
+  if (currentStep.value < totalSteps) {
     // Basic validation
     if (currentStep.value === 1 && !form.value.name) return
     if (currentStep.value === 2 && !form.value.repoUrl) return
@@ -324,6 +441,21 @@ const submit = async () => {
       .filter(e => e.key.trim())
       .map(e => ({ key: e.key.trim(), val: e.val }))
 
+    const cleanSettingFiles = form.value.settingFiles
+      .filter(s => s.filePath.trim())
+      .map(s => ({ filePath: s.filePath.trim(), content: s.content }))
+
+    // Map deploy targets — only those with deployDir filled
+    const deployTargets = form.value.deployTargets
+      .filter(t => t.deployDir.trim())
+      .map(t => ({
+        serverId: t.serverId,
+        deployDir: t.deployDir.trim(),
+        serviceName: t.serviceName.trim() || null,
+        port: t.port ? Number(t.port) : null,
+        healthCheckUrl: t.healthCheckUrl.trim() || null,
+      }))
+
     const payload = {
       name: form.value.name,
       type: form.value.type,
@@ -334,11 +466,10 @@ const submit = async () => {
       trigger: form.value.trigger,
       token: form.value.token || null,
       envVars: cleanEnvVars.length ? cleanEnvVars : null,
-      deployDir: form.value.deployDir || null,
-      serviceName: form.value.serviceName || null,
-      port: form.value.port ? Number(form.value.port) : null,
+      settingFiles: cleanSettingFiles.length ? cleanSettingFiles : null,
       scheduleCron: form.value.scheduleCron || null,
       scheduleEnabled: form.value.scheduleEnabled,
+      deployTargets: deployTargets.length ? deployTargets : null,
     }
 
     if (props.app) {
@@ -368,12 +499,11 @@ const resetForm = () => {
     token: '',
     buildCmd: '',
     outputDir: '',
-    deployDir: '',
-    serviceName: '',
-    port: '',
     envVars: [{ key: '', val: '' }],
+    settingFiles: [],
     scheduleEnabled: false,
-    scheduleCron: '0 2 * * *'
+    scheduleCron: '0 2 * * *',
+    deployTargets: [],
   }
 }
 </script>
@@ -539,4 +669,64 @@ const resetForm = () => {
 
 .step-panel { animation: fadeUp 0.2s ease both; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Multi-server deploy targets ──────────────────────────────────── */
+.target-badge {
+  display: inline-flex; align-items: center;
+  background: rgba(0,201,167,0.1); color: var(--accent);
+  border: 1px solid rgba(0,201,167,0.25); border-radius: 99px;
+  font-size: 9px; font-weight: 600; padding: 1px 7px;
+  margin-left: 8px; vertical-align: middle;
+}
+.servers-loading, .servers-empty {
+  font-size: 12px; color: var(--text3); padding: 12px 0; text-align: center;
+}
+.server-target-list { display: flex; flex-direction: column; gap: 8px; }
+.server-target-item {
+  border: 1.5px solid var(--border2); border-radius: 8px;
+  overflow: hidden; transition: border-color 0.15s;
+}
+.server-target-item.selected { border-color: var(--accent); }
+.sti-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; cursor: pointer; transition: background 0.15s;
+}
+.sti-header:hover { background: var(--bg2); }
+.sti-check {
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  border: 1.5px solid var(--border2); background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.sti-check.checked { border-color: var(--accent); background: rgba(0,201,167,0.15); color: var(--accent); }
+.sti-info { flex: 1; min-width: 0; }
+.sti-name { font-size: 12px; font-weight: 600; color: var(--text1); }
+.sti-ip { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 1px; }
+.sti-configured { font-size: 10px; color: var(--accent); font-weight: 500; white-space: nowrap; }
+.sti-config {
+  padding: 10px 12px 12px; border-top: 1px solid var(--border);
+  background: var(--bg2); animation: fadeUp 0.15s ease both;
+}
+.form-input-sm { font-size: 11px; padding: 6px 8px; }
+
+/* ── Settings Files ─────────────────────────────────────────────── */
+.setting-files-list { display: flex; flex-direction: column; gap: 12px; }
+.setting-file-row {
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg2);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.setting-file-header {
+  display: flex; gap: 10px; align-items: center; padding: 8px 10px;
+  background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border);
+}
+.setting-file-header .form-input {
+  background: var(--bg1); border-color: transparent; flex: 1;
+}
+.setting-file-header .form-input:focus { border-color: var(--accent); }
+.form-textarea {
+  min-height: 120px; resize: vertical; border: none; border-radius: 0;
+  font-size: 11px; line-height: 1.5; background: transparent;
+}
+.form-textarea:focus { border-color: transparent !important; background: rgba(0,0,0,0.2) !important; }
+
 </style>

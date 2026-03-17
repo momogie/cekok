@@ -60,18 +60,48 @@ public static class ApplicationsController
             };
             db.Applications.Add(app);
 
-            // Legacy: also create a DeployTarget row if serverId provided
-            if (dto.ServerId != null && dto.DeployDir != null)
+        // Settings Files
+        if (dto.SettingFiles != null && dto.SettingFiles.Count > 0)
+        {
+            foreach (var s in dto.SettingFiles)
+            {
+                db.AppSettingFiles.Add(new AppSettingFile
+                {
+                    AppId = app.Id,
+                    FilePath = s.FilePath,
+                    ContentEnc = enc.Encrypt(s.Content)
+                });
+            }
+        }
+
+        // Multi-server deploy targets from new form
+        if (dto.DeployTargets != null && dto.DeployTargets.Count > 0)
+        {
+            foreach (var t in dto.DeployTargets)
             {
                 db.DeployTargets.Add(new DeployTarget
                 {
-                    AppId       = app.Id,
-                    ServerId    = dto.ServerId,
-                    DeployDir   = dto.DeployDir,
-                    ServiceName = dto.ServiceName,
-                    Port        = dto.Port,
+                    AppId          = app.Id,
+                    ServerId       = t.ServerId,
+                    DeployDir      = t.DeployDir,
+                    ServiceName    = t.ServiceName,
+                    Port           = t.Port,
+                    HealthCheckUrl = t.HealthCheckUrl,
                 });
             }
+        }
+        // Legacy: also create a DeployTarget row if single serverId provided
+        else if (dto.ServerId != null && dto.DeployDir != null)
+        {
+            db.DeployTargets.Add(new DeployTarget
+            {
+                AppId       = app.Id,
+                ServerId    = dto.ServerId,
+                DeployDir   = dto.DeployDir,
+                ServiceName = dto.ServiceName,
+                Port        = dto.Port,
+            });
+        }
 
             await db.SaveChangesAsync(ct);
             return Results.Created($"/api/applications/{app.Id}", app);
@@ -97,9 +127,6 @@ public static class ApplicationsController
             if (dto.BuildCmd    != null) app.BuildCmd    = dto.BuildCmd;
             if (dto.OutputDir   != null) app.OutputDir   = dto.OutputDir;
             if (dto.Trigger     != null) app.Trigger     = dto.Trigger;
-            if (dto.DeployDir   != null) app.DeployDir   = dto.DeployDir;
-            if (dto.ServiceName != null) app.ServiceName = dto.ServiceName;
-            if (dto.Port.HasValue)       app.Port        = dto.Port.Value;
             if (dto.ScheduleCron    != null)    app.ScheduleCron    = dto.ScheduleCron;
             if (dto.ScheduleEnabled.HasValue)   app.ScheduleEnabled = dto.ScheduleEnabled.Value;
             if (dto.EnvVars != null)
@@ -107,8 +134,54 @@ public static class ApplicationsController
             if (!string.IsNullOrWhiteSpace(dto.Token))
                 app.TokenEnc = enc.Encrypt(dto.Token!);
 
+            // Sync deploy targets if provided
+            if (dto.DeployTargets != null)
+            {
+                var existing = await db.DeployTargets.Where(t => t.AppId == id).ToListAsync(ct);
+                db.DeployTargets.RemoveRange(existing);
+                foreach (var t in dto.DeployTargets)
+                {
+                    db.DeployTargets.Add(new DeployTarget
+                    {
+                        AppId          = id,
+                        ServerId       = t.ServerId,
+                        DeployDir      = t.DeployDir,
+                        ServiceName    = t.ServiceName,
+                        Port           = t.Port,
+                        HealthCheckUrl = t.HealthCheckUrl,
+                    });
+                }
+            }
+
+            // Sync setting files
+            if (dto.SettingFiles != null)
+            {
+                var existingSettings = await db.AppSettingFiles.Where(s => s.AppId == id).ToListAsync(ct);
+                db.AppSettingFiles.RemoveRange(existingSettings);
+                foreach (var s in dto.SettingFiles)
+                {
+                    db.AppSettingFiles.Add(new AppSettingFile
+                    {
+                        AppId = id,
+                        FilePath = s.FilePath,
+                        ContentEnc = enc.Encrypt(s.Content)
+                    });
+                }
+            }
+
             await db.SaveChangesAsync(ct);
             return Results.Ok(app);
+        });
+
+        // GET /api/applications/{id}/settings
+        group.MapGet("/{id}/settings", [Authorize(Roles = "admin,operator")] async (string id, CekokDbContext db, EncryptionService enc, CancellationToken ct) =>
+        {
+            var settings = await db.AppSettingFiles.Where(s => s.AppId == id).ToListAsync(ct);
+            var result = settings.Select(s => new {
+                s.FilePath,
+                Content = enc.Decrypt(s.ContentEnc)
+            });
+            return Results.Ok(result);
         });
 
         // DELETE /api/applications/{id}
@@ -141,11 +214,13 @@ public static class ApplicationsController
         string? Token,
         /// <summary>Environment variables [{key, val}]</summary>
         List<EnvVarDto>? EnvVars,
-        /// <summary>Deploy target fields (single-server)</summary>
+        List<SettingFileDto>? SettingFiles,
+        /// <summary>Multi-server deploy targets (new form)</summary>
+        List<DeployTargetDto>? DeployTargets,
+        /// <summary>Legacy single-server fields (backward compat)</summary>
         string? DeployDir,
         string? ServiceName,
         int? Port,
-        /// <summary>Optional: pre-existing server to link as DeployTarget</summary>
         string? ServerId,
         string? ScheduleCron,
         bool ScheduleEnabled
@@ -160,14 +235,15 @@ public static class ApplicationsController
         string? Trigger,
         string? Token,
         List<EnvVarDto>? EnvVars,
-        string? DeployDir,
-        string? ServiceName,
-        int? Port,
+        List<SettingFileDto>? SettingFiles,
+        /// <summary>Multi-server deploy targets — replaces all existing targets when provided</summary>
+        List<DeployTargetDto>? DeployTargets,
         string? ScheduleCron,
         bool? ScheduleEnabled
     );
 
     public record EnvVarDto(string Key, string Val);
+    public record SettingFileDto(string FilePath, string Content);
 
     // Kept for backwards compat with other parts of the codebase
     public record DeployTargetDto(string ServerId, string DeployDir,

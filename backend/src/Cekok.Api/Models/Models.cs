@@ -135,3 +135,21 @@ public class NginxConfig
     [Required] public string ConfigContent { get; set; } = "";
     public string? LastDeployedAt { get; set; }
 }
+
+/// <summary>
+/// A config file (e.g. appsettings.json, google/fcm.json) that should be written
+/// to the deploy directory at deploy time. Content is stored encrypted.
+/// </summary>
+public class AppSettingFile
+{
+    [Key] public string Id { get; set; } = Guid.NewGuid().ToString();
+    /// <summary>FK → Application.Id</summary>
+    [Required] public string AppId { get; set; } = "";
+    /// <summary>
+    /// Relative path from the app root, e.g. "appsettings.json" or "google/fcm.json".
+    /// </summary>
+    [Required] public string FilePath { get; set; } = "";
+    /// <summary>File content encrypted with EncryptionService (AES-256).</summary>
+    [Required] public string ContentEnc { get; set; } = "";
+    public string UpdatedAt { get; set; } = DateTime.UtcNow.ToString("O");
+}
