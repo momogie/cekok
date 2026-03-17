@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeployKit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0: #0d0f14;
+  --bg1: #13161e;
+  --bg2: #1a1e28;
+  --bg3: #222636;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text1: #e8eaf0;
+  --text2: #8b8fa8;
+  --text3: #4e5268;
+  --accent: #00c9a7;
+  --accent2: #0097ff;
+  --warn: #f0a500;
+  --danger: #f05060;
+  --success: #00c9a7;
+  --purple: #8b7fff;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font: 'Sora', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --sidebar: 220px;
+  --transition: 0.2s ease;
+}
+[data-theme="light"] {
+  --bg0: #f0f2f7;
+  --bg1: #ffffff;
+  --bg2: #f5f6fa;
+  --bg3: #eaecf3;
+  --border: rgba(0,0,0,0.07);
+  --border2: rgba(0,0,0,0.13);
+  --text1: #1a1d2e;
+  --text2: #5a5e7a;
+  --text3: #a0a4b8;
+  --accent: #009e84;
+  --accent2: #0077cc;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; font-family:var(--font); background:var(--bg0); color:var(--text1); font-size:14px; line-height:1.5; transition:background var(--transition), color var(--transition); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
+
+/* ── Layout ── */
+.shell { display:flex; height:100vh; overflow:hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width:var(--sidebar); flex-shrink:0;
+  background:var(--bg1); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; overflow:hidden;
+  transition:background var(--transition);
+}
+.sidebar-logo {
+  padding:20px 16px 14px;
+  display:flex; align-items:center; gap:10px;
+  border-bottom:1px solid var(--border);
+}
+.logo-icon {
+  width:30px; height:30px; border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:700; color:#fff; letter-spacing:-0.5px;
+  flex-shrink:0;
+}
+.logo-text { font-size:15px; font-weight:600; letter-spacing:-0.3px; }
+.logo-text span { color:var(--accent); }
+
+.sidebar-nav { flex:1; padding:10px 8px; overflow-y:auto; }
+.nav-section { margin-bottom:18px; }
+.nav-label { font-size:10px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:var(--text3); padding:0 8px; margin-bottom:4px; }
+.nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px; border-radius:var(--radius-sm);
+  color:var(--text2); cursor:pointer; transition:all var(--transition);
+  font-size:13px; font-weight:400; user-select:none;
+}
+.nav-item:hover { background:var(--bg2); color:var(--text1); }
+.nav-item.active { background:rgba(0,201,167,0.1); color:var(--accent); font-weight:500; }
+.nav-icon { width:16px; height:16px; opacity:0.8; flex-shrink:0; }
+.nav-item .badge {
+  margin-left:auto; font-size:10px; font-weight:600;
+  background:var(--danger); color:#fff;
+  border-radius:99px; padding:1px 6px;
+}
+
+.sidebar-footer { padding:12px 8px; border-top:1px solid var(--border); }
+.theme-toggle {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:var(--radius-sm);
+  cursor:pointer; color:var(--text2); font-size:13px;
+  transition:all var(--transition);
+}
+.theme-toggle:hover { background:var(--bg2); color:var(--text1); }
+.toggle-track {
+  width:34px; height:18px; border-radius:99px; background:var(--bg3);
+  border:1px solid var(--border2); position:relative; transition:background var(--transition);
+  margin-left:auto; flex-shrink:0;
+}
+[data-theme="light"] .toggle-track { background:var(--accent); }
+.toggle-thumb {
+  position:absolute; top:2px; left:2px;
+  width:12px; height:12px; border-radius:50%; background:#fff;
+  transition:transform var(--transition);
+}
+[data-theme="light"] .toggle-thumb { transform:translateX(16px); }
+
+/* ── Main ── */
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.topbar {
+  height:54px; flex-shrink:0;
+  background:var(--bg1); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 24px; gap:16px;
+  transition:background var(--transition);
+}
+.topbar-title { font-size:15px; font-weight:600; }
+.topbar-sub { font-size:12px; color:var(--text3); }
+.topbar-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 14px; border-radius:var(--radius-sm);
+  font-size:12px; font-weight:500; cursor:pointer;
+  border:none; font-family:var(--font); transition:all var(--transition);
+}
+.btn-primary { background:var(--accent); color:#0d1814; }
+.btn-primary:hover { opacity:0.88; transform:translateY(-1px); }
+.btn-ghost { background:var(--bg3); color:var(--text2); border:1px solid var(--border2); }
+.btn-ghost:hover { color:var(--text1); background:var(--bg2); }
+.btn-danger { background:rgba(240,80,96,0.15); color:var(--danger); border:1px solid rgba(240,80,96,0.25); }
+.btn-danger:hover { background:rgba(240,80,96,0.25); }
+
+.content { flex:1; overflow-y:auto; padding:24px; }
+
+/* ── Stats row ── */
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+.stat-card {
+  background:var(--bg1); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px 18px;
+  transition:background var(--transition);
+}
+.stat-label { font-size:11px; font-weight:500; letter-spacing:0.5px; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
+.stat-val { font-size:24px; font-weight:600; font-family:var(--mono); letter-spacing:-1px; }
+.stat-val.green { color:var(--success); }
+.stat-val.warn { color:var(--warn); }
+.stat-val.red { color:var(--danger); }
+.stat-meta { font-size:11px; color:var(--text3); margin-top:4px; }
+
+/* ── Grid ── */
+.grid-2 { display:grid; grid-template-columns:1fr 380px; gap:16px; }
+
+/* ── App list ── */
+.panel {
+  background:var(--bg1); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden;
+  transition:background var(--transition);
+}
+.panel-header {
+  padding:14px 18px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px;
+}
+.panel-title { font-size:13px; font-weight:600; }
+.panel-sub { font-size:11px; color:var(--text3); margin-left:auto; }
+
+.app-row {
+  padding:14px 18px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:12px; cursor:pointer;
+  transition:background var(--transition);
+}
+.app-row:last-child { border-bottom:none; }
+.app-row:hover { background:var(--bg2); }
+.app-row.selected { background:rgba(0,201,167,0.06); }
+
+.app-icon {
+  width:36px; height:36px; border-radius:8px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; font-family:var(--mono);
+}
+.icon-dotnet { background:rgba(139,127,255,0.15); color:var(--purple); }
+.icon-nuxt { background:rgba(0,201,167,0.12); color:var(--accent); }
+.icon-vue { background:rgba(0,201,167,0.12); color:var(--accent); }
+.icon-static { background:rgba(0,151,255,0.12); color:var(--accent2); }
+
+.app-info { flex:1; min-width:0; }
+.app-name { font-size:13px; font-weight:500; }
+.app-meta { font-size:11px; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+
+.status-dot {
+  width:8px; height:8px; border-radius:50%; flex-shrink:0;
+}
+.dot-green { background:var(--success); box-shadow:0 0 6px var(--success); }
+.dot-yellow { background:var(--warn); box-shadow:0 0 6px var(--warn); }
+.dot-red { background:var(--danger); box-shadow:0 0 6px var(--danger); }
+.dot-gray { background:var(--text3); }
+
+.status-pill {
+  font-size:10px; font-weight:600; letter-spacing:0.4px; text-transform:uppercase;
+  padding:2px 8px; border-radius:99px; flex-shrink:0;
+}
+.pill-success { background:rgba(0,201,167,0.12); color:var(--accent); }
+.pill-running {
+  background:rgba(0,151,255,0.12); color:var(--accent2);
+  animation:pillPulse 1.5s infinite;
+}
+@keyframes pillPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.pill-failed { background:rgba(240,80,96,0.12); color:var(--danger); }
+.pill-queued { background:rgba(240,165,0,0.12); color:var(--warn); }
+.pill-idle { background:var(--bg3); color:var(--text3); }
+
+.app-time { font-size:10px; color:var(--text3); font-family:var(--mono); flex-shrink:0; min-width:70px; text-align:right; }
+
+/* ── Right panel: detail ── */
+.detail-tabs { display:flex; border-bottom:1px solid var(--border); }
+.dtab {
+  padding:12px 16px; font-size:12px; font-weight:500; color:var(--text3);
+  cursor:pointer; border-bottom:2px solid transparent; transition:all var(--transition);
+}
+.dtab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.dtab:hover:not(.active) { color:var(--text1); }
+
+/* ── Log pane ── */
+.log-pane {
+  background:var(--bg0); padding:14px; font-family:var(--mono);
+  font-size:11px; line-height:1.8; height:280px; overflow-y:auto;
+  color:var(--text2);
+}
+.log-line { display:flex; gap:10px; }
+.log-ts { color:var(--text3); flex-shrink:0; }
+.log-info { color:var(--text2); }
+.log-success { color:var(--success); }
+.log-warn { color:var(--warn); }
+.log-error { color:var(--danger); }
+.log-cmd { color:var(--purple); }
+.log-cursor {
+  display:inline-block; width:7px; height:12px;
+  background:var(--accent); margin-left:2px; vertical-align:middle;
+  animation:blink 1s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ── Schedule config ── */
+.schedule-form { padding:16px; display:flex; flex-direction:column; gap:14px; }
+.form-group { display:flex; flex-direction:column; gap:5px; }
+.form-label { font-size:11px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; }
+.form-input, .form-select {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:var(--radius-sm); padding:7px 10px;
+  color:var(--text1); font-size:12px; font-family:var(--mono);
+  outline:none; transition:border-color var(--transition);
+  width:100%;
+}
+.form-input:focus, .form-select:focus { border-color:var(--accent); }
+.form-select option { background:var(--bg2); }
+.cron-preview {
+  background:var(--bg0); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:8px 10px;
+  font-family:var(--mono); font-size:11px; color:var(--accent);
+}
+.cron-human { font-size:11px; color:var(--text3); font-family:var(--font); }
+
+.cron-fields { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.cron-field { display:flex; flex-direction:column; gap:3px; text-align:center; }
+.cron-flabel { font-size:9px; color:var(--text3); text-align:center; }
+.cron-input {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:var(--radius-sm); padding:5px 4px;
+  color:var(--text1); font-size:12px; font-family:var(--mono);
+  outline:none; text-align:center; width:100%;
+  transition:border-color var(--transition);
+}
+.cron-input:focus { border-color:var(--accent); }
+
+.history-row {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 16px; border-bottom:1px solid var(--border); font-size:11px;
+}
+.history-row:last-child { border-bottom:none; }
+.history-commit { font-family:var(--mono); color:var(--accent2); font-size:10px; }
+.history-msg { flex:1; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.history-time { color:var(--text3); flex-shrink:0; font-family:var(--mono); font-size:10px; }
+.history-dur { color:var(--text3); flex-shrink:0; font-family:var(--mono); font-size:10px; min-width:36px; text-align:right; }
+
+/* ── Deploy running animation ── */
+.deploy-bar { height:2px; background:var(--bg3); border-radius:99px; overflow:hidden; margin:0; }
+.deploy-progress {
+  height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:99px; transition:width 0.4s ease;
+}
+
+/* ── Page anim ── */
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.stat-card { animation:fadeUp 0.3s ease both; }
+.stat-card:nth-child(1){animation-delay:0.04s}
+.stat-card:nth-child(2){animation-delay:0.08s}
+.stat-card:nth-child(3){animation-delay:0.12s}
+.stat-card:nth-child(4){animation-delay:0.16s}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .grid-2{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ── Role pills ── */
+.role-pill {
+  font-size:9px; font-weight:600; letter-spacing:0.6px; text-transform:uppercase;
+  padding:2px 7px; border-radius:99px; flex-shrink:0;
+}
+.role-master { background:rgba(139,127,255,0.15); color:var(--purple); }
+.role-app    { background:rgba(0,201,167,0.12);   color:var(--accent); }
+.role-proxy  { background:rgba(0,151,255,0.12);   color:var(--accent2); }
+.role-db     { background:rgba(240,165,0,0.12);   color:var(--warn); }
+.role-static { background:rgba(136,135,128,0.15); color:var(--text3); }
+
+/* ── Server status dot ── */
+.srv-online  { background:var(--success); box-shadow:0 0 5px var(--success); }
+.srv-offline { background:var(--danger);  box-shadow:0 0 5px var(--danger); }
+.srv-unknown { background:var(--text3); }
+
+/* ── Server cards grid ── */
+.servers-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+@media(max-width:900px){ .servers-grid{grid-template-columns:1fr} }
+
+.server-card {
+  background:var(--bg1); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px 18px;
+  cursor:pointer; transition:all var(--transition);
+}
+.server-card:hover { border-color:var(--border2); background:var(--bg2); }
+.server-card.selected { border-color:var(--accent); background:rgba(0,201,167,0.04); }
+.server-card-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.server-card-ip {
+  font-family:var(--mono); font-size:11px; color:var(--text3);
+  background:var(--bg3); padding:2px 7px; border-radius:4px;
+}
+.server-card-name { font-size:13px; font-weight:600; flex:1; }
+
+/* Resource bars */
+.res-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.res-label { font-size:10px; color:var(--text3); width:32px; flex-shrink:0; }
+.res-bar { flex:1; height:4px; background:var(--bg3); border-radius:99px; overflow:hidden; }
+.res-fill { height:100%; border-radius:99px; transition:width 0.4s ease; }
+.res-fill.low  { background:var(--accent); }
+.res-fill.mid  { background:var(--warn); }
+.res-fill.high { background:var(--danger); }
+.res-pct { font-size:10px; font-family:var(--mono); color:var(--text3); width:28px; text-align:right; }
+
+.server-tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:10px; }
+.server-tag {
+  font-size:9px; padding:1px 6px; border-radius:4px;
+  background:var(--bg3); color:var(--text3); border:1px solid var(--border);
+}
+
+/* ── Per-target deploy rows (in detail panel) ── */
+.target-section { padding:12px 16px; border-bottom:1px solid var(--border); }
+.target-section:last-child { border-bottom:none; }
+.target-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.target-ip { font-family:var(--mono); font-size:11px; color:var(--text3); }
+.target-name { font-size:12px; font-weight:500; flex:1; }
+.target-log { font-family:var(--mono); font-size:10px; color:var(--text3); margin-top:4px; line-height:1.7; }
+.target-log .tl-ok  { color:var(--accent); }
+.target-log .tl-err { color:var(--danger); }
+.target-log .tl-cmd { color:var(--purple); }
+.target-log .tl-run { color:var(--accent2); }
+
+/* ── Nginx badge ── */
+.nginx-badge {
+  font-size:9px; font-weight:600; padding:1px 6px; border-radius:4px;
+  background:rgba(0,151,255,0.1); color:var(--accent2); border:1px solid rgba(0,151,255,0.2);
+}
+
+/* ── Add server btn inside server list ── */
+.add-server-row {
+  padding:12px 18px; border-top:1px solid var(--border);
+  display:flex; align-items:center; gap:8px;
+  color:var(--text3); cursor:pointer; font-size:12px;
+  transition:all var(--transition);
+}
+.add-server-row:hover { color:var(--accent); background:var(--bg2); }
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position:fixed; inset:0; z-index:100;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.2s ease;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+
+.modal {
+  background:var(--bg1); border:1px solid var(--border2);
+  border-radius:14px; width:600px; max-width:calc(100vw - 32px);
+  max-height:calc(100vh - 48px); display:flex; flex-direction:column;
+  transform:translateY(16px) scale(0.98);
+  transition:transform 0.22s cubic-bezier(0.34,1.36,0.64,1), opacity 0.2s ease;
+  overflow:hidden;
+}
+.modal-overlay.open .modal { transform:translateY(0) scale(1); }
+
+.modal-header {
+  padding:18px 20px 14px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:flex-start; gap:12px; flex-shrink:0;
+}
+.modal-header-icon {
+  width:36px; height:36px; border-radius:9px; flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex; align-items:center; justify-content:center;
+}
+.modal-title { font-size:15px; font-weight:600; line-height:1.3; }
+.modal-subtitle { font-size:12px; color:var(--text3); margin-top:2px; }
+.modal-close {
+  margin-left:auto; cursor:pointer; color:var(--text3);
+  width:28px; height:28px; border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s; flex-shrink:0;
+}
+.modal-close:hover { background:var(--bg3); color:var(--text1); }
+
+/* Steps indicator */
+.modal-steps {
+  display:flex; align-items:center; gap:0;
+  padding:12px 20px; border-bottom:1px solid var(--border);
+  flex-shrink:0; overflow-x:auto;
+}
+.mstep {
+  display:flex; align-items:center; gap:7px;
+  font-size:11px; font-weight:500; color:var(--text3);
+  white-space:nowrap;
+}
+.mstep.active { color:var(--text1); }
+.mstep.done { color:var(--accent); }
+.mstep-num {
+  width:20px; height:20px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:600;
+  background:var(--bg3); color:var(--text3);
+  border:1px solid var(--border2);
+}
+.mstep.active .mstep-num { background:var(--accent); color:#0d1814; border-color:transparent; }
+.mstep.done .mstep-num { background:rgba(0,201,167,0.15); color:var(--accent); border-color:var(--accent); }
+.mstep-sep { width:24px; height:1px; background:var(--border2); margin:0 4px; flex-shrink:0; }
+
+/* Modal body */
+.modal-body { flex:1; overflow-y:auto; padding:20px; }
+.modal-footer {
+  padding:14px 20px; border-top:1px solid var(--border);
+  display:flex; align-items:center; gap:10px; flex-shrink:0;
+}
+.modal-footer-left { flex:1; font-size:11px; color:var(--text3); }
+
+/* App type selector */
+.type-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+.type-card {
+  border:1.5px solid var(--border2); border-radius:var(--radius);
+  padding:14px 12px; cursor:pointer; transition:all 0.15s;
+  display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;
+}
+.type-card:hover { border-color:var(--border2); background:var(--bg2); }
+.type-card.selected { border-color:var(--accent); background:rgba(0,201,167,0.06); }
+.type-card-icon {
+  width:40px; height:40px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:700; font-family:var(--mono);
+}
+.type-card-name { font-size:12px; font-weight:600; }
+.type-card-desc { font-size:10px; color:var(--text3); line-height:1.4; }
+
+/* Section label inside modal */
+.msec-label {
+  font-size:10px; font-weight:600; letter-spacing:1px; text-transform:uppercase;
+  color:var(--text3); margin-bottom:8px; margin-top:16px;
+}
+.msec-label:first-child { margin-top:0; }
+
+/* Form rows */
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-group { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+.form-group:last-child { margin-bottom:0; }
+.form-label { font-size:11px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; }
+.form-label span { color:var(--danger); margin-left:2px; }
+.form-input, .form-select, .form-textarea {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:var(--radius-sm); padding:8px 10px;
+  color:var(--text1); font-size:12px; font-family:var(--mono);
+  outline:none; transition:border-color 0.15s; width:100%;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color:var(--accent); background:var(--bg1);
+}
+.form-input::placeholder { color:var(--text3); }
+.form-select option { background:var(--bg2); }
+.form-textarea { resize:vertical; min-height:64px; line-height:1.6; }
+.form-hint { font-size:10px; color:var(--text3); margin-top:2px; line-height:1.5; }
+
+/* Env var rows */
+.env-list { display:flex; flex-direction:column; gap:6px; }
+.env-row { display:grid; grid-template-columns:1fr 1fr 28px; gap:6px; align-items:center; }
+.env-del {
+  width:28px; height:28px; border-radius:var(--radius-sm);
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:none; color:var(--text3); cursor:pointer;
+  font-size:14px; transition:all 0.15s;
+}
+.env-del:hover { background:rgba(240,80,96,0.12); color:var(--danger); }
+.add-row-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11px; font-weight:500; color:var(--accent2);
+  cursor:pointer; padding:4px 0; border:none; background:none;
+  font-family:var(--font); transition:opacity 0.15s; margin-top:4px;
+}
+.add-row-btn:hover { opacity:0.7; }
+
+/* Cron fields inside modal */
+.cron-fields { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:8px; }
+.cron-field { display:flex; flex-direction:column; gap:3px; }
+.cron-flabel { font-size:9px; color:var(--text3); text-align:center; text-transform:uppercase; letter-spacing:0.5px; }
+.cron-input {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:var(--radius-sm); padding:6px 4px;
+  color:var(--text1); font-size:12px; font-family:var(--mono);
+  outline:none; text-align:center; width:100%;
+  transition:border-color 0.15s;
+}
+.cron-input:focus { border-color:var(--accent); }
+.cron-preview-box {
+  background:var(--bg0); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:8px 12px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px;
+}
+.cron-expr { font-family:var(--mono); font-size:12px; color:var(--accent); }
+.cron-human { font-size:11px; color:var(--text3); }
+
+/* Quick cron presets */
+.cron-presets { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.cron-preset {
+  padding:3px 10px; border-radius:99px; font-size:10px; font-weight:500;
+  border:1px solid var(--border2); color:var(--text2); cursor:pointer;
+  transition:all 0.15s; background:transparent; font-family:var(--font);
+}
+.cron-preset:hover { border-color:var(--accent); color:var(--accent); }
+
+/* Review section */
+.review-block {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--radius); padding:14px 16px; margin-bottom:10px;
+}
+.review-row { display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; }
+.review-key { font-size:11px; color:var(--text3); }
+.review-val { font-size:11px; font-family:var(--mono); color:var(--text1); text-align:right; max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.review-val.accent { color:var(--accent); }
+.review-section-title { font-size:10px; font-weight:600; letter-spacing:0.8px; text-transform:uppercase; color:var(--text3); margin:14px 0 6px; }
+.review-section-title:first-child { margin-top:0; }
+
+/* Step anim */
+.step-panel { animation:fadeUp 0.18s ease both; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+/* Success state */
+.modal-success {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:40px 20px; gap:14px; text-align:center;
+}
+.success-icon {
+  width:56px; height:56px; border-radius:50%;
+  background:rgba(0,201,167,0.12); border:2px solid var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  animation:popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+.success-title { font-size:16px; font-weight:600; }
+.success-sub { font-size:12px; color:var(--text3); max-width:320px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">DK</div>
+      <div class="logo-text">Deploy<span>Kit</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-label">Overview</div>
+        <div class="nav-item active" onclick="setPage('dashboard')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".7"/></svg>
+          Dashboard
+        </div>
+        <div class="nav-item" onclick="setPage('apps')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Applications
+        </div>
+        <div class="nav-item" id="nav-servers" onclick="setPage('servers')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="5" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="9" width="12" height="5" rx="1.5" stroke="currentColor" stroke-width="1.2"/><circle cx="13" cy="4.5" r="1" fill="currentColor"/><circle cx="13" cy="11.5" r="1" fill="currentColor"/></svg>
+          Servers
+          <span class="badge" id="offline-badge" style="display:none">!</span>
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Deploys</div>
+        <div class="nav-item" onclick="setPage('queue')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h9M2 12h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          Queue
+          <span class="badge" id="queue-badge">2</span>
+        </div>
+        <div class="nav-item" onclick="setPage('history')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          History
+        </div>
+        <div class="nav-item" onclick="setPage('schedule')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Schedules
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Config</div>
+        <div class="nav-item" onclick="setPage('settings')">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Settings
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle" onclick="toggleTheme()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span id="theme-label">Light mode</span>
+        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="page-title">Dashboard</div>
+        <div class="topbar-sub" id="page-sub">Production server · Linux (systemd)</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost" onclick="deployAll()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v10M3 7l5-5 5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Deploy all
+        </button>
+        <button class="btn btn-primary" onclick="openAddApp()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Add app
+        </button>
+      </div>
+    </div>
+
+    <div class="content" id="main-content">
+      <!-- rendered by JS -->
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════ ADD APP MODAL ═══════════════════════════ -->
+<div class="modal-overlay" id="add-modal" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <div class="modal-header-icon">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="modal-title" id="modal-title-text">Add new application</div>
+        <div class="modal-subtitle" id="modal-subtitle-text">Configure your app for auto-deploy</div>
+      </div>
+      <div class="modal-close" onclick="closeModal()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+    <div class="modal-steps" id="modal-steps">
+      <div class="mstep active" id="step-ind-1"><div class="mstep-num">1</div>App type</div>
+      <div class="mstep-sep"></div>
+      <div class="mstep" id="step-ind-2"><div class="mstep-num">2</div>Repository</div>
+      <div class="mstep-sep"></div>
+      <div class="mstep" id="step-ind-3"><div class="mstep-num">3</div>Build &amp; deploy</div>
+      <div class="mstep-sep"></div>
+      <div class="mstep" id="step-ind-4"><div class="mstep-num">4</div>Schedule</div>
+      <div class="mstep-sep"></div>
+      <div class="mstep" id="step-ind-5"><div class="mstep-num">5</div>Review</div>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer">
+      <div class="modal-footer-left" id="modal-footer-hint"></div>
+      <button class="btn btn-ghost" id="modal-back-btn" onclick="modalBack()" style="display:none">&#8592; Back</button>
+      <button class="btn btn-primary" id="modal-next-btn" onclick="modalNext()">Continue &#8594;</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ── Data ──
+const SERVERS = [
+  {
+    id:'srv-1', name:'Master (DeployKit)', ip:'10.0.0.1', role:'master',
+    ssh_user:'deploy', status:'online', os:'Ubuntu 22.04',
+    nginx:true, tags:['master','build'],
+    cpu:34, mem:61, disk:48,
+  },
+  {
+    id:'srv-2', name:'App Server 1', ip:'10.0.0.2', role:'app-server',
+    ssh_user:'deploy', status:'online', os:'Ubuntu 22.04',
+    nginx:true, tags:['production','zone-a'],
+    cpu:72, mem:55, disk:31,
+  },
+  {
+    id:'srv-3', name:'App Server 2', ip:'10.0.0.3', role:'app-server',
+    ssh_user:'deploy', status:'online', os:'Ubuntu 22.04',
+    nginx:false, tags:['production','zone-b'],
+    cpu:18, mem:43, disk:29,
+  },
+  {
+    id:'srv-4', name:'Proxy / LB', ip:'10.0.0.4', role:'proxy',
+    ssh_user:'deploy', status:'offline', os:'Ubuntu 22.04',
+    nginx:true, tags:['proxy','nginx'],
+    cpu:0, mem:0, disk:22,
+  },
+];
+
+const ROLES = {
+  'master':      {label:'Master',      cls:'role-master'},
+  'app-server':  {label:'App Server',  cls:'role-app'},
+  'proxy':       {label:'Proxy / LB',  cls:'role-proxy'},
+  'db-server':   {label:'DB Server',   cls:'role-db'},
+  'static':      {label:'Static',      cls:'role-static'},
+};
+
+const APPS = [
+  {
+    id:'hrdesk-api', name:'HRDesk API', type:'dotnet', icon:'.NET',
+    iconClass:'icon-dotnet', branch:'main', repo:'org/hrdesk-api',
+    status:'success', lastDeploy:'2 min ago', lastCommit:'feat: add leave endpoint',
+    commitHash:'a3f9e12', duration:'38s',
+    service:'hrdesk-api', port:5100, url:'https://api.hrdesk.internal',
+    schedule:{enabled:true, cron:'0 2 * * *', label:'Every day at 02:00'},
+    history:[
+      {hash:'a3f9e12',msg:'feat: add leave endpoint',time:'2 min ago',dur:'38s',status:'success'},
+      {hash:'b81c44f',msg:'fix: fix overtime calc',time:'3h ago',dur:'41s',status:'success'},
+      {hash:'9e2d807',msg:'refactor: clean controller',time:'1d ago',dur:'44s',status:'failed'},
+      {hash:'c14aa30',msg:'feat: payroll module',time:'2d ago',dur:'55s',status:'success'},
+    ],
+    targets:[
+      {serverId:'srv-2',deployDir:'/var/www/hrdesk-api',service:'hrdesk-api',status:'success',lastDeploy:'2 min ago',dur:'38s'},
+      {serverId:'srv-3',deployDir:'/var/www/hrdesk-api',service:'hrdesk-api',status:'success',lastDeploy:'2 min ago',dur:'41s'},
+    ]
+  },
+  {
+    id:'hrdesk-fe', name:'HRDesk Frontend', type:'nuxt', icon:'NX',
+    iconClass:'icon-nuxt', branch:'main', repo:'org/hrdesk-frontend',
+    status:'running', lastDeploy:'Just now', lastCommit:'ui: update dashboard layout',
+    commitHash:'d7b2f91', duration:'—',
+    service:'hrdesk-fe', port:3000, url:'https://hrdesk.internal',
+    schedule:{enabled:true, cron:'30 2 * * *', label:'Every day at 02:30'},
+    progress:62,
+    history:[
+      {hash:'d7b2f91',msg:'ui: update dashboard layout',time:'just now',dur:'—',status:'running'},
+      {hash:'f03e218',msg:'fix: mobile navbar',time:'6h ago',dur:'1m 12s',status:'success'},
+      {hash:'11bc55a',msg:'feat: dark mode toggle',time:'1d ago',dur:'1m 05s',status:'success'},
+    ],
+    targets:[
+      {serverId:'srv-2',deployDir:'/var/www/hrdesk-fe',service:'hrdesk-fe',status:'running',lastDeploy:'just now',dur:'—',progress:62},
+      {serverId:'srv-3',deployDir:'/var/www/hrdesk-fe',service:'hrdesk-fe',status:'running',lastDeploy:'just now',dur:'—',progress:48},
+    ]
+  },
+  {
+    id:'uphr-api', name:'UPHR API', type:'dotnet', icon:'.NT',
+    iconClass:'icon-dotnet', branch:'release', repo:'org/uphr-backend',
+    status:'success', lastDeploy:'1h ago', lastCommit:'fix: attendance punch log',
+    commitHash:'7ca1b33', duration:'52s',
+    service:'uphr-api', port:5200, url:'https://api.uphr.internal',
+    schedule:{enabled:false, cron:'0 3 * * 1', label:'Every Monday at 03:00'},
+    history:[
+      {hash:'7ca1b33',msg:'fix: attendance punch log',time:'1h ago',dur:'52s',status:'success'},
+      {hash:'e9f4d10',msg:'feat: QRIS payment',time:'5h ago',dur:'49s',status:'success'},
+    ],
+    targets:[
+      {serverId:'srv-2',deployDir:'/var/www/uphr-api',service:'uphr-api',status:'success',lastDeploy:'1h ago',dur:'52s'},
+      {serverId:'srv-3',deployDir:'/var/www/uphr-api',service:'uphr-api',status:'success',lastDeploy:'1h ago',dur:'49s'},
+    ]
+  },
+  {
+    id:'uphr-fe', name:'UPHR Mobile Web', type:'vue', icon:'VU',
+    iconClass:'icon-vue', branch:'main', repo:'org/uphr-frontend',
+    status:'failed', lastDeploy:'4h ago', lastCommit:'fix: glassmorphism card',
+    commitHash:'2ae8f04', duration:'18s',
+    service:'uphr-fe', port:3001, url:'https://app.uphr.internal',
+    schedule:{enabled:true, cron:'0 4 * * *', label:'Every day at 04:00'},
+    history:[
+      {hash:'2ae8f04',msg:'fix: glassmorphism card',time:'4h ago',dur:'18s',status:'failed'},
+      {hash:'bc39e77',msg:'feat: punch log screen',time:'1d ago',dur:'1m 03s',status:'success'},
+    ],
+    targets:[
+      {serverId:'srv-2',deployDir:'/var/www/uphr-fe',service:'uphr-fe',status:'failed',lastDeploy:'4h ago',dur:'18s'},
+      {serverId:'srv-3',deployDir:'/var/www/uphr-fe',service:'uphr-fe',status:'failed',lastDeploy:'4h ago',dur:'18s'},
+    ]
+  },
+  {
+    id:'identity-svc', name:'Identity Service', type:'dotnet', icon:'.NT',
+    iconClass:'icon-dotnet', branch:'main', repo:'org/identity-svc',
+    status:'success', lastDeploy:'12h ago', lastCommit:'feat: multi-tenant workspace',
+    commitHash:'55fa902', duration:'44s',
+    service:'identity-svc', port:5300, url:'https://auth.internal',
+    schedule:{enabled:false, cron:'0 1 * * 0', label:'Every Sunday at 01:00'},
+    history:[
+      {hash:'55fa902',msg:'feat: multi-tenant workspace',time:'12h ago',dur:'44s',status:'success'},
+      {hash:'1b7c3d9',msg:'fix: JWT expiry bug',time:'2d ago',dur:'41s',status:'success'},
+    ],
+    targets:[
+      {serverId:'srv-2',deployDir:'/var/www/identity-svc',service:'identity-svc',status:'success',lastDeploy:'12h ago',dur:'44s'},
+    ]
+  },
+  {
+    id:'docs-static', name:'Docs Site', type:'static', icon:'ST',
+    iconClass:'icon-static', branch:'gh-pages', repo:'org/docs',
+    status:'idle', lastDeploy:'3d ago', lastCommit:'docs: API reference update',
+    commitHash:'90dc4e1', duration:'9s',
+    service:null, port:null, url:'https://docs.internal',
+    schedule:{enabled:false, cron:'0 0 * * 0', label:'Every Sunday at 00:00'},
+    history:[
+      {hash:'90dc4e1',msg:'docs: API reference update',time:'3d ago',dur:'9s',status:'success'},
+    ],
+    targets:[
+      {serverId:'srv-2',deployDir:'/var/www/docs',service:null,status:'success',lastDeploy:'3d ago',dur:'9s'},
+    ]
+  },
+];
+
+let selectedApp = APPS[0];
+let activeTab = 'logs';
+let currentPage = 'dashboard';
+
+// ── Fake log lines per app ──
+const LOGS = {
+  'hrdesk-api': [
+    ['12:41:02','cmd','$ git pull origin main'],
+    ['12:41:03','info','Already up to date. HEAD a3f9e12'],
+    ['12:41:03','cmd','$ dotnet publish -c Release -o /tmp/build/hrdesk-api'],
+    ['12:41:19','info','Build succeeded. 0 Warning(s) 0 Error(s)'],
+    ['12:41:19','cmd','$ systemctl stop hrdesk-api'],
+    ['12:41:20','warn','Waiting for process to stop...'],
+    ['12:41:21','cmd','$ rsync -a /tmp/build/ /var/www/hrdesk-api/'],
+    ['12:41:22','cmd','$ systemctl start hrdesk-api'],
+    ['12:41:24','success','✓ Service started. PID 18842'],
+    ['12:41:24','cmd','$ curl -sf http://localhost:5100/health'],
+    ['12:41:25','success','✓ Health check OK — {"status":"healthy"}'],
+    ['12:41:25','success','✓ Deploy complete in 38s'],
+  ],
+  'hrdesk-fe': [
+    ['12:43:00','cmd','$ git pull origin main'],
+    ['12:43:01','info','Updating b81c44f..d7b2f91'],
+    ['12:43:01','cmd','$ npm ci'],
+    ['12:43:14','info','added 847 packages in 13s'],
+    ['12:43:14','cmd','$ npm run build'],
+    ['12:43:28','info','Nuxt 3.11 — building...'],
+    ['12:43:41','info','✓ Server built in 13.2s'],
+    ['12:43:42','info','Bundling client...'],
+  ],
+  'uphr-fe': [
+    ['08:00:00','cmd','$ git pull origin main'],
+    ['08:00:01','info','Updating bc39e77..2ae8f04'],
+    ['08:00:01','cmd','$ npm ci'],
+    ['08:00:13','info','added 512 packages in 12s'],
+    ['08:00:13','cmd','$ npm run build'],
+    ['08:00:18','error','ERROR: Cannot find module @/components/PunchLog'],
+    ['08:00:18','error','Build failed with exit code 1'],
+    ['08:00:18','error','✗ Deploy aborted. Service not restarted.'],
+  ]
+};
+
+function getLog(appId) {
+  return LOGS[appId] || [
+    ['—','cmd','$ git pull origin '+selectedApp.branch],
+    ['—','success','Already up to date.'],
+    ['—','cmd','$ dotnet publish -c Release'],
+    ['—','success','Build succeeded.'],
+    ['—','cmd','$ systemctl restart '+appId],
+    ['—','success','✓ Deploy complete in '+selectedApp.duration],
+  ];
+}
+
+// ── Theme ──
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('theme-label').textContent = isDark ? 'Dark mode' : 'Light mode';
+}
+
+// ── Pages ──
+function setPage(p) {
+  currentPage = p;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event && event.currentTarget && event.currentTarget.classList.add('active');
+  render();
+}
+
+// ── Status helpers ──
+function pillHtml(status) {
+  const map = {
+    success:'<span class="status-pill pill-success">success</span>',
+    running:'<span class="status-pill pill-running">running</span>',
+    failed:'<span class="status-pill pill-failed">failed</span>',
+    queued:'<span class="status-pill pill-queued">queued</span>',
+    idle:'<span class="status-pill pill-idle">idle</span>',
+  };
+  return map[status] || '';
+}
+function dotHtml(status) {
+  const map = {success:'dot-green',running:'dot-green',failed:'dot-red',idle:'dot-gray',queued:'dot-yellow'};
+  return `<div class="status-dot ${map[status]||'dot-gray'}"></div>`;
+}
+
+// ── Render dashboard ──
+function renderDashboard() {
+  const total = APPS.length;
+  const ok = APPS.filter(a=>a.status==='success').length;
+  const running = APPS.filter(a=>a.status==='running').length;
+  const failed = APPS.filter(a=>a.status==='failed').length;
+  const srvOnline = SERVERS.filter(s=>s.status==='online').length;
+  const srvTotal  = SERVERS.length;
+
+  return `
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total apps</div>
+      <div class="stat-val">${total}</div>
+      <div class="stat-meta">registered</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Healthy</div>
+      <div class="stat-val green">${ok}</div>
+      <div class="stat-meta">last deploy OK</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Failed</div>
+      <div class="stat-val red">${failed}</div>
+      <div class="stat-meta">need attention</div>
+    </div>
+    <div class="stat-card" onclick="setPage('servers')" style="cursor:pointer">
+      <div class="stat-label">Servers</div>
+      <div class="stat-val ${srvOnline<srvTotal?'warn':'green'}">${srvOnline}<span style="font-size:14px;color:var(--text3)">/${srvTotal}</span></div>
+      <div class="stat-meta">${srvTotal-srvOnline>0?srvTotal-srvOnline+' offline':'all online'}</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Applications</div>
+        <div class="panel-sub">${total} apps · ${srvTotal} servers</div>
+      </div>
+      ${APPS.map(app=>{
+        const tgts = (app.targets||[]);
+        const tgtBadge = tgts.length ? tgts.map(t=>{
+          const srv = SERVERS.find(s=>s.id===t.serverId);
+          const dotCls = t.status==='success'?'dot-green':t.status==='running'?'dot-green':t.status==='failed'?'dot-red':'dot-gray';
+          return `<span style="display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);font-size:9px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 5px">
+            <span class="status-dot ${dotCls}" style="width:5px;height:5px"></span>${srv?srv.ip:'?'}</span>`;
+        }).join('') : '';
+        return `
+        <div class="app-row ${app.id===selectedApp.id?'selected':''}" onclick="selectApp('${app.id}')">
+          <div class="app-icon ${app.iconClass}">${app.icon}</div>
+          <div class="app-info">
+            <div class="app-name">${app.name}</div>
+            <div class="app-meta" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+              <span>${app.repo} · ${app.branch}</span>
+              ${tgtBadge}
+            </div>
+          </div>
+          ${dotHtml(app.status)}
+          ${pillHtml(app.status)}
+          ${app.status==='running'?`<div style="width:70px"><div class="deploy-bar"><div class="deploy-progress" style="width:${app.progress||50}%"></div></div></div>`:''}
+          <div class="app-time">${app.lastDeploy}</div>
+          <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="triggerDeploy(event,'${app.id}')">Deploy</button>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- Detail panel -->
+    <div class="panel" style="display:flex;flex-direction:column;overflow:hidden">
+      <div class="panel-header" style="flex-shrink:0">
+        <div class="app-icon ${selectedApp.iconClass}" style="width:28px;height:28px;font-size:11px">${selectedApp.icon}</div>
+        <div>
+          <div class="panel-title">${selectedApp.name}</div>
+          <div class="panel-sub" style="margin-left:0">${selectedApp.url||''}</div>
+        </div>
+        ${pillHtml(selectedApp.status)}
+      </div>
+
+      <div class="detail-tabs">
+        <div class="dtab ${activeTab==='logs'?'active':''}" onclick="setTab('logs')">Deploy log</div>
+        <div class="dtab ${activeTab==='schedule'?'active':''}" onclick="setTab('schedule')">Schedule</div>
+        <div class="dtab ${activeTab==='history'?'active':''}" onclick="setTab('history')">History</div>
+      </div>
+
+      <div style="flex:1;overflow:hidden">
+        ${renderDetailTab()}
+      </div>
+
+      <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">
+        <button class="btn btn-primary" style="flex:1" onclick="triggerDeploy(event,'${selectedApp.id}')">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M8 2v10M3 7l5-5 5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Deploy now
+        </button>
+        ${selectedApp.status==='failed'?`<button class="btn btn-ghost" style="flex:1" onclick="rollback('${selectedApp.id}')">↩ Rollback</button>`:''}
+        ${selectedApp.service?`<button class="btn btn-danger" onclick="stopService('${selectedApp.id}')">■ Stop</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderDetailTab() {
+  if (activeTab === 'logs') {
+    const targets = selectedApp.targets || [];
+    if (!targets.length) {
+      // no targets — show plain master log
+      const lines = getLog(selectedApp.id);
+      return `<div class="log-pane" id="log-pane">
+        ${lines.map(([ts,type,msg])=>`<div class="log-line"><span class="log-ts">${ts}</span><span class="log-${type}">${escHtml(msg)}</span></div>`).join('')}
+        ${selectedApp.status==='running'?'<div class="log-line"><span class="log-ts">…</span><span class="log-info"><span class="log-cursor"></span></span></div>':''}
+      </div>`;
+    }
+
+    // Build phase (master only)
+    const masterLines = getLog(selectedApp.id);
+    const buildDone = selectedApp.status !== 'running' || (selectedApp.progress||0) > 30;
+    return `<div style="overflow-y:auto;height:100%">
+      <!-- Master build phase -->
+      <div class="target-section">
+        <div class="target-header">
+          <div class="status-dot ${selectedApp.status==='running'?'dot-green':'dot-green'}" style="width:7px;height:7px"></div>
+          <div class="target-name">Build phase</div>
+          <div class="target-ip">10.0.0.1 (master)</div>
+          ${selectedApp.status==='running'?pillHtml('running'):pillHtml('success')}
+        </div>
+        <div class="log-pane" style="height:110px;border-radius:6px;margin-top:4px" id="log-pane">
+          ${masterLines.slice(0, buildDone ? masterLines.length : 4).map(([ts,type,msg])=>`
+            <div class="log-line"><span class="log-ts">${ts}</span><span class="log-${type}">${escHtml(msg)}</span></div>`).join('')}
+          ${selectedApp.status==='running'?'<div class="log-line"><span class="log-ts">…</span><span class="log-info"><span class="log-cursor"></span></span></div>':''}
+        </div>
+      </div>
+      <!-- Per-target deploy phase -->
+      ${targets.map(t => {
+        const srv = SERVERS.find(s=>s.id===t.serverId);
+        const srvName = srv ? srv.name : t.serverId;
+        const srvIp   = srv ? srv.ip   : '?';
+        const dotCls  = t.status==='success'?'dot-green':t.status==='running'?'dot-green':t.status==='failed'?'dot-red':'dot-gray';
+        const deployLines = t.status==='running' ? [
+          `<span class="tl-cmd">$ scp -r /tmp/dk-builds/${selectedApp.id}/ deploy@${srvIp}:${t.deployDir}/</span>`,
+          `<span class="tl-run">Uploading artifacts... ${t.progress||50}%</span>`,
+        ] : t.status==='success' ? [
+          `<span class="tl-cmd">$ scp -r /tmp/dk-builds/${selectedApp.id}/ deploy@${srvIp}:${t.deployDir}/</span>`,
+          `<span class="tl-ok">✓ Upload complete in ${t.dur}</span>`,
+          t.service ? `<span class="tl-cmd">$ ssh deploy@${srvIp} systemctl restart ${t.service}</span>` : '',
+          t.service ? `<span class="tl-ok">✓ Service restarted</span>` : '',
+          `<span class="tl-ok">✓ Health check OK</span>`,
+        ] : [
+          `<span class="tl-cmd">$ scp -r /tmp/dk-builds/${selectedApp.id}/ deploy@${srvIp}:${t.deployDir}/</span>`,
+          `<span class="tl-err">✗ Deploy failed — service not restarted</span>`,
+          `<span class="tl-err">✗ Auto-rollback triggered</span>`,
+        ];
+        return `<div class="target-section">
+          <div class="target-header">
+            <div class="status-dot ${dotCls}" style="width:7px;height:7px"></div>
+            <div class="target-name">${srvName}</div>
+            <div class="target-ip">${srvIp}</div>
+            ${pillHtml(t.status)}
+            <div class="app-time">${t.lastDeploy}</div>
+          </div>
+          <div class="target-log">${deployLines.filter(Boolean).join('<br>')}</div>
+          ${t.status==='running'?`<div class="deploy-bar" style="margin-top:6px"><div class="deploy-progress" style="width:${t.progress||50}%"></div></div>`:''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+  if (activeTab === 'schedule') {
+    const s = selectedApp.schedule;
+    const parts = s.cron.split(' ');
+    return `<div class="schedule-form">
+      <div class="form-group">
+        <div class="form-label">Enabled</div>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <div class="toggle-track" style="margin-left:0;${s.enabled?'background:var(--accent)':''}">
+            <div class="toggle-thumb" style="${s.enabled?'transform:translateX(16px)':''}"></div>
+          </div>
+          <span style="font-size:12px;color:var(--text2)">${s.enabled?'Schedule active':'Schedule disabled'}</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Cron expression</div>
+        <div class="cron-fields">
+          ${['Minute','Hour','Day','Month','Weekday'].map((l,i)=>`
+            <div class="cron-field">
+              <div class="cron-flabel">${l}</div>
+              <input class="cron-input" value="${parts[i]}" oninput="updateCron(this,${i})">
+            </div>`).join('')}
+        </div>
+        <div class="cron-preview" id="cron-preview">${s.cron}</div>
+        <div class="cron-human" id="cron-human">${s.label}</div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Trigger branch</div>
+        <select class="form-select">
+          <option ${selectedApp.branch==='main'?'selected':''}>main</option>
+          <option ${selectedApp.branch==='release'?'selected':''}>release</option>
+          <option>develop</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Timeout (seconds)</div>
+        <input class="form-input" type="number" value="300" min="30" max="3600">
+      </div>
+      <button class="btn btn-primary" onclick="saveCron('${selectedApp.id}')">Save schedule</button>
+    </div>`;
+  }
+  if (activeTab === 'history') {
+    return `<div style="overflow-y:auto;height:100%">
+      ${selectedApp.history.map(h=>`
+        <div class="history-row">
+          ${dotHtml(h.status)}
+          <span class="history-commit">${h.hash}</span>
+          <span class="history-msg">${escHtml(h.msg)}</span>
+          <span class="history-time">${h.time}</span>
+          <span class="history-dur">${h.dur}</span>
+          ${h.status!=='running'&&h.status!=='failed'?`<button class="btn btn-ghost" style="padding:2px 8px;font-size:10px" onclick="rollbackTo('${h.hash}')">↩</button>`:''}
+        </div>`).join('')}
+    </div>`;
+  }
+}
+
+function renderSchedulePage() {
+  return `
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Scheduled deploys</div>
+      <div class="panel-sub">cron-based auto deploy</div>
+    </div>
+    ${APPS.map(app=>`
+      <div class="app-row" onclick="selectApp('${app.id}');setPage('dashboard')">
+        <div class="app-icon ${app.iconClass}">${app.icon}</div>
+        <div class="app-info">
+          <div class="app-name">${app.name}</div>
+          <div class="app-meta">${app.schedule.enabled ? '⏰ '+app.schedule.label : '— not scheduled'}</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);flex-shrink:0;min-width:120px;text-align:right">
+          ${app.schedule.enabled ? app.schedule.cron : '—'}
+        </div>
+        <div class="toggle-track" style="margin-left:8px;${app.schedule.enabled?'background:var(--accent)':''}">
+          <div class="toggle-thumb" style="${app.schedule.enabled?'transform:translateX(16px)':''}"></div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+let selectedServer = SERVERS[0];
+
+function renderServersPage() {
+  return `
+  <div class="servers-grid" style="margin-bottom:16px">
+    ${SERVERS.map(srv => {
+      const r = ROLES[srv.role] || {label:srv.role, cls:'role-static'};
+      const dotCls = srv.status==='online'?'srv-online':'srv-offline';
+      const appsOnSrv = APPS.filter(a=>(a.targets||[]).some(t=>t.serverId===srv.id));
+      const cpuCls = srv.cpu>80?'high':srv.cpu>60?'mid':'low';
+      const memCls = srv.mem>80?'high':srv.mem>60?'mid':'low';
+      return `
+      <div class="server-card ${selectedServer&&selectedServer.id===srv.id?'selected':''}" onclick="selectServer('${srv.id}')">
+        <div class="server-card-header">
+          <div class="status-dot ${dotCls}" style="width:8px;height:8px;flex-shrink:0"></div>
+          <div class="server-card-name">${srv.name}</div>
+          <div class="server-card-ip">${srv.ip}</div>
+          <span class="role-pill ${r.cls}">${r.label}</span>
+          ${srv.nginx?'<span class="nginx-badge">nginx</span>':''}
+        </div>
+        ${srv.status==='online'?`
+        <div class="res-row"><span class="res-label">CPU</span><div class="res-bar"><div class="res-fill ${cpuCls}" style="width:${srv.cpu}%"></div></div><span class="res-pct">${srv.cpu}%</span></div>
+        <div class="res-row"><span class="res-label">MEM</span><div class="res-bar"><div class="res-fill ${memCls}" style="width:${srv.mem}%"></div></div><span class="res-pct">${srv.mem}%</span></div>
+        <div class="res-row"><span class="res-label">DISK</span><div class="res-bar"><div class="res-fill low" style="width:${srv.disk}%"></div></div><span class="res-pct">${srv.disk}%</span></div>
+        `:`<div style="font-size:11px;color:var(--danger);padding:6px 0">Server offline — cannot connect</div>`}
+        <div class="server-tags">
+          ${srv.tags.map(t=>`<span class="server-tag">${t}</span>`).join('')}
+          <span class="server-tag">${appsOnSrv.length} app${appsOnSrv.length!==1?'s':''}</span>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <!-- Selected server detail -->
+  ${selectedServer ? renderServerDetail(selectedServer) : ''}
+
+  <div style="margin-top:14px">
+    <button class="btn btn-primary" onclick="openAddServerModal()">
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Add server
+    </button>
+  </div>`;
+}
+
+function renderServerDetail(srv) {
+  const appsOnSrv = APPS.filter(a=>(a.targets||[]).some(t=>t.serverId===srv.id));
+  return `
+  <div class="panel">
+    <div class="panel-header">
+      <div class="status-dot ${srv.status==='online'?'srv-online':'srv-offline'}" style="width:8px;height:8px"></div>
+      <div>
+        <div class="panel-title">${srv.name}</div>
+        <div class="panel-sub" style="margin-left:0">${srv.ip} · ${srv.os} · ${srv.ssh_user}@${srv.ip}</div>
+      </div>
+      <span class="role-pill ${(ROLES[srv.role]||{cls:'role-static'}).cls}" style="margin-left:auto">${(ROLES[srv.role]||{label:srv.role}).label}</span>
+    </div>
+
+    <!-- Apps deployed here -->
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Apps on this server</div>
+      ${appsOnSrv.length ? appsOnSrv.map(app => {
+        const tgt = (app.targets||[]).find(t=>t.serverId===srv.id);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <div class="app-icon ${app.iconClass}" style="width:26px;height:26px;font-size:10px">${app.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:500">${app.name}</div>
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${tgt?tgt.deployDir:'—'}</div>
+          </div>
+          ${tgt?pillHtml(tgt.status):''}
+          ${tgt&&tgt.service?`<span style="font-size:10px;font-family:var(--mono);color:var(--text3)">${tgt.service}</span>`:''}
+        </div>`;
+      }).join('') : '<div style="font-size:12px;color:var(--text3)">No apps deployed here yet.</div>'}
+    </div>
+
+    <!-- Nginx section -->
+    <div style="padding:12px 18px">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Nginx</div>
+      ${srv.nginx ? `
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost" style="font-size:11px" onclick="nginxAction('reload','${srv.id}')">↺ Reload config</button>
+          <button class="btn btn-ghost" style="font-size:11px" onclick="nginxAction('test','${srv.id}')">✓ Test config</button>
+          <button class="btn btn-ghost" style="font-size:11px" onclick="nginxAction('editor','${srv.id}')">Edit site config</button>
+        </div>` : `
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;color:var(--text3)">nginx not installed</span>
+          <button class="btn btn-primary" style="font-size:11px" onclick="nginxAction('install','${srv.id}')">Install nginx</button>
+        </div>`}
+    </div>
+  </div>`;
+}
+
+function selectServer(id) {
+  selectedServer = SERVERS.find(s=>s.id===id) || SERVERS[0];
+  render();
+}
+
+function nginxAction(action, srvId) {
+  const srv = SERVERS.find(s=>s.id===srvId);
+  if (!srv) return;
+  const msgs = {
+    reload: `Reloading nginx on ${srv.ip}...\nnginx -t && systemctl reload nginx`,
+    test: `Testing nginx config on ${srv.ip}...\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful`,
+    install: `Installing nginx on ${srv.ip}...\napt-get install -y nginx\nSystemctl enable nginx`,
+    editor: `Nginx site config editor for ${srv.ip} — coming soon.`,
+  };
+  if (action === 'install') { srv.nginx = true; }
+  alert(msgs[action] || action);
+  if (action === 'install') render();
+}
+
+function openAddServerModal() {
+  alert('Add server modal — coming soon.\n\nWill collect: IP, SSH user, password, role, tags.');
+}
+
+// ── Main render ──
+function render() {
+  const content = document.getElementById('main-content');
+  if (!content) return;
+  const titles = {
+    dashboard:['Dashboard','Production server · Linux (systemd)'],
+    schedule:['Schedules','Cron-based auto deploy'],
+    apps:['Applications','All registered apps'],
+    queue:['Queue','Pending jobs'],
+    history:['Deploy history','All past deploys'],
+    servers:['Servers','Connected servers'],
+    settings:['Settings','Global config'],
+  };
+  const [title, sub] = titles[currentPage] || ['Dashboard',''];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-sub').textContent = sub;
+
+  if (currentPage === 'dashboard') {
+    content.innerHTML = renderDashboard();
+    const lp = document.getElementById('log-pane');
+    if (lp) lp.scrollTop = lp.scrollHeight;
+  } else if (currentPage === 'schedule') {
+    content.innerHTML = renderSchedulePage();
+  } else if (currentPage === 'servers') {
+    content.innerHTML = renderServersPage();
+    // show offline badge on sidebar
+    const ob = document.getElementById('offline-badge');
+    const offlineCount = SERVERS.filter(s=>s.status!=='online').length;
+    if (ob) { ob.style.display = offlineCount ? '' : 'none'; ob.textContent = offlineCount||''; }
+  } else {
+    content.innerHTML = `<div style="color:var(--text3);padding:40px;text-align:center;font-size:13px">${title} — coming soon</div>`;
+  }
+}
+
+function selectApp(id) {
+  selectedApp = APPS.find(a=>a.id===id) || APPS[0];
+  activeTab = 'logs';
+  currentPage = 'dashboard';
+  render();
+}
+
+function setTab(t) {
+  activeTab = t;
+  render();
+}
+
+let cronParts = [];
+function updateCron(input, idx) {
+  const preview = document.getElementById('cron-preview');
+  const humanEl = document.getElementById('cron-human');
+  if (!preview) return;
+  const allInputs = document.querySelectorAll('.cron-input');
+  const parts = Array.from(allInputs).map(el=>el.value||'*');
+  if (preview) preview.textContent = parts.join(' ');
+  if (humanEl) {
+    const humans = {
+      '0 2 * * *':'Every day at 02:00',
+      '30 2 * * *':'Every day at 02:30',
+      '0 3 * * 1':'Every Monday at 03:00',
+      '0 4 * * *':'Every day at 04:00',
+      '0 0 * * 0':'Every Sunday at 00:00',
+      '0 1 * * 0':'Every Sunday at 01:00',
+    };
+    humanEl.textContent = humans[parts.join(' ')] || 'Custom schedule';
+  }
+}
+
+function triggerDeploy(e, id) {
+  e.stopPropagation();
+  const app = APPS.find(a=>a.id===id);
+  if (!app) return;
+  if (app.status === 'running') { alert('Already deploying!'); return; }
+  app.status = 'running';
+  app.lastDeploy = 'Just now';
+  app.progress = 0;
+  render();
+  let p = 0;
+  const iv = setInterval(()=>{
+    p += Math.random()*12+4;
+    app.progress = Math.min(p, 97);
+    const bar = document.querySelector(`.app-row:nth-child(${APPS.indexOf(app)+1}) .deploy-progress`);
+    if (bar) bar.style.width = app.progress+'%';
+    if (p >= 100) {
+      clearInterval(iv);
+      app.status = 'success';
+      app.lastDeploy = 'Just now';
+      app.progress = 100;
+      app.history.unshift({hash:Math.random().toString(36).slice(2,9),msg:'Manual deploy',time:'just now',dur:Math.round(30+Math.random()*30)+'s',status:'success'});
+      render();
+    }
+  }, 400);
+}
+
+function deployAll() {
+  APPS.filter(a=>a.status!=='running').forEach((app,i)=>{
+    setTimeout(()=>triggerDeploy({stopPropagation:()=>{}}, app.id), i*600);
+  });
+}
+
+function rollback(id) {
+  const app = APPS.find(a=>a.id===id);
+  if (!app) return;
+  if (confirm(`Rollback ${app.name} to previous build?`)) {
+    app.status = 'success';
+    app.lastDeploy = 'Just now';
+    render();
+  }
+}
+function rollbackTo(hash) {
+  if (confirm(`Rollback to commit ${hash}?`)) alert('Rollback triggered (simulated)');
+}
+function stopService(id) {
+  const app = APPS.find(a=>a.id===id);
+  if (app && confirm(`Stop ${app.service}?`)) { app.status = 'idle'; render(); }
+}
+function saveCron(id) {
+  const preview = document.getElementById('cron-preview');
+  if (preview) {
+    const app = APPS.find(a=>a.id===id);
+    if (app) {
+      app.schedule.cron = preview.textContent;
+      app.schedule.enabled = true;
+    }
+  }
+  alert('Schedule saved!');
+}
+// ── Modal state ──
+let modalStep = 1;
+const TOTAL_STEPS = 5;
+let modalData = {
+  type: 'dotnet',
+  name: '', repo: '', branch: 'main', token: '',
+  buildCmd: '', outputDir: '', deployDir: '', serviceName: '', port: '',
+  envVars: [{key:'ASPNETCORE_ENVIRONMENT',val:'Production'},{key:'',val:''}],
+  scheduleEnabled: false, cron: '0 2 * * *',
+};
+
+const APP_TYPES = [
+  { id:'dotnet', icon:'.NT', cls:'icon-dotnet', name:'.NET / C#',   desc:'ASP.NET Core API, Worker, Blazor',    buildCmd:'dotnet publish -c Release -o ./publish', outputDir:'publish/', serviceType:'systemd' },
+  { id:'nuxt',   icon:'NX',  cls:'icon-nuxt',   name:'Nuxt 3',       desc:'SSR or static site generation',       buildCmd:'npm run build',                          outputDir:'.output/', serviceType:'pm2' },
+  { id:'vue',    icon:'VU',  cls:'icon-vue',     name:'Vue / Vite',   desc:'SPA — served via nginx',              buildCmd:'npm run build',                          outputDir:'dist/', serviceType:'nginx' },
+  { id:'next',   icon:'NX',  cls:'icon-nuxt',    name:'Next.js',      desc:'React SSR or static export',          buildCmd:'npm run build',                          outputDir:'.next/', serviceType:'pm2' },
+  { id:'angular',icon:'NG',  cls:'icon-static',  name:'Angular',      desc:'SPA — served via nginx',              buildCmd:'ng build --configuration=production',    outputDir:'dist/', serviceType:'nginx' },
+  { id:'static', icon:'ST',  cls:'icon-static',  name:'Static site',  desc:'HTML/CSS — served via nginx/Caddy',   buildCmd:'',                                       outputDir:'.',     serviceType:'nginx' },
+];
+
+const CRON_PRESETS = [
+  {label:'Every day 00:00', val:'0 0 * * *'},
+  {label:'Every day 02:00', val:'0 2 * * *'},
+  {label:'Every 6 hours',   val:'0 */6 * * *'},
+  {label:'Every Monday',    val:'0 2 * * 1'},
+  {label:'Every hour',      val:'0 * * * *'},
+  {label:'Custom',          val:'custom'},
+];
+
+function openAddApp() {
+  modalStep = 1;
+  modalData = {
+    type:'dotnet', name:'', repo:'', branch:'main', token:'',
+    buildCmd:'dotnet publish -c Release -o ./publish', outputDir:'publish/', deployDir:'/var/www/my-app',
+    serviceName:'my-app', port:'5000',
+    envVars:[{key:'ASPNETCORE_ENVIRONMENT',val:'Production'},{key:'',val:''}],
+    scheduleEnabled:false, cron:'0 2 * * *',
+  };
+  renderModalStep();
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('add-modal').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('add-modal')) closeModal();
+}
+
+function updateStepIndicators() {
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    const el = document.getElementById('step-ind-'+i);
+    if (!el) continue;
+    el.className = 'mstep';
+    if (i < modalStep) el.classList.add('done');
+    else if (i === modalStep) el.classList.add('active');
+    const num = el.querySelector('.mstep-num');
+    if (i < modalStep) num.innerHTML = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    else num.textContent = i;
+  }
+}
+
+function renderModalStep() {
+  updateStepIndicators();
+  const body = document.getElementById('modal-body');
+  const backBtn = document.getElementById('modal-back-btn');
+  const nextBtn = document.getElementById('modal-next-btn');
+  const hint = document.getElementById('modal-footer-hint');
+  const steps = document.getElementById('modal-steps');
+  const footer = document.getElementById('modal-footer');
+
+  if (!body || !backBtn || !nextBtn || !hint || !steps) return;
+  if (footer) footer.style.display = '';
+  steps.style.display = '';
+
+  backBtn.style.display = modalStep > 1 ? '' : 'none';
+
+  if (modalStep === 1) {
+    nextBtn.textContent = 'Continue →';
+    hint.textContent = 'Step 1 of 5 — choose app runtime';
+    body.innerHTML = `<div class="step-panel">
+      <div class="msec-label">App runtime</div>
+      <div class="type-grid">
+        ${APP_TYPES.map(t=>`
+          <div class="type-card ${modalData.type===t.id?'selected':''}" onclick="selectType('${t.id}')">
+            <div class="type-card-icon ${t.cls}">${t.icon}</div>
+            <div class="type-card-name">${t.name}</div>
+            <div class="type-card-desc">${t.desc}</div>
+          </div>`).join('')}
+      </div>
+      <div class="msec-label">Display name</div>
+      <div class="form-group">
+        <label class="form-label">App name <span>*</span></label>
+        <input class="form-input" id="m-name" placeholder="e.g. HRDesk API" value="${escHtml(modalData.name)}" oninput="modalData.name=this.value">
+      </div>
+    </div>`;
+  }
+
+  else if (modalStep === 2) {
+    nextBtn.textContent = 'Continue →';
+    hint.textContent = 'Step 2 of 5 — repository & branch';
+    body.innerHTML = `<div class="step-panel">
+      <div class="msec-label">GitHub repository</div>
+      <div class="form-group">
+        <label class="form-label">Repository URL <span>*</span></label>
+        <input class="form-input" id="m-repo" placeholder="https://github.com/org/repo.git" value="${escHtml(modalData.repo)}" oninput="modalData.repo=this.value">
+        <div class="form-hint">Public or private repo. Use HTTPS URL.</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Branch <span>*</span></label>
+          <input class="form-input" id="m-branch" placeholder="main" value="${escHtml(modalData.branch)}" oninput="modalData.branch=this.value">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Deploy trigger</label>
+          <select class="form-select" id="m-trigger">
+            <option value="manual" selected>Manual only</option>
+            <option value="webhook">GitHub webhook push</option>
+            <option value="schedule">Schedule (cron)</option>
+            <option value="both">Webhook + Schedule</option>
+          </select>
+        </div>
+      </div>
+      <div class="msec-label" style="margin-top:16px">Authentication</div>
+      <div class="form-group">
+        <label class="form-label">Personal access token</label>
+        <input class="form-input" id="m-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value="${escHtml(modalData.token)}" oninput="modalData.token=this.value">
+        <div class="form-hint">Required for private repos. Stored encrypted on server. Needs <code style="color:var(--accent2)">repo</code> scope.</div>
+      </div>
+    </div>`;
+  }
+
+  else if (modalStep === 3) {
+    const t = APP_TYPES.find(x=>x.id===modalData.type);
+    nextBtn.textContent = 'Continue →';
+    hint.textContent = 'Step 3 of 5 — build & deploy paths';
+    body.innerHTML = `<div class="step-panel">
+      <div class="msec-label">Build</div>
+      <div class="form-group">
+        <label class="form-label">Build command</label>
+        <input class="form-input" id="m-build" placeholder="${t?t.buildCmd:''}" value="${escHtml(modalData.buildCmd)}" oninput="modalData.buildCmd=this.value">
+        <div class="form-hint">Runs inside the cloned repo directory.</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Build output dir</label>
+          <input class="form-input" id="m-output" placeholder="${t?t.outputDir:'dist/'}" value="${escHtml(modalData.outputDir)}" oninput="modalData.outputDir=this.value">
+          <div class="form-hint">Relative to repo root.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Deploy target dir <span>*</span></label>
+          <input class="form-input" id="m-deploy" placeholder="/var/www/my-app" value="${escHtml(modalData.deployDir)}" oninput="modalData.deployDir=this.value">
+          <div class="form-hint">Absolute path on server.</div>
+        </div>
+      </div>
+      <div class="msec-label">Service (systemd)</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Service name <span>*</span></label>
+          <input class="form-input" id="m-svc" placeholder="my-app" value="${escHtml(modalData.serviceName)}" oninput="modalData.serviceName=this.value">
+          <div class="form-hint">Unit file: <code style="color:var(--accent2)">/etc/systemd/system/{name}.service</code></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Port</label>
+          <input class="form-input" id="m-port" placeholder="5000" value="${escHtml(modalData.port)}" oninput="modalData.port=this.value">
+          <div class="form-hint">For health check & proxy routing.</div>
+        </div>
+      </div>
+      <div class="msec-label">Environment variables</div>
+      <div class="env-list" id="env-list">
+        ${modalData.envVars.map((ev,i)=>`
+          <div class="env-row" id="env-row-${i}">
+            <input class="form-input" placeholder="KEY" value="${escHtml(ev.key)}" oninput="modalData.envVars[${i}].key=this.value">
+            <input class="form-input" placeholder="value" value="${escHtml(ev.val)}" oninput="modalData.envVars[${i}].val=this.value">
+            <button class="env-del" onclick="removeEnvVar(${i})">×</button>
+          </div>`).join('')}
+      </div>
+      <button class="add-row-btn" onclick="addEnvVar()">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Add variable
+      </button>
+    </div>`;
+  }
+
+  else if (modalStep === 4) {
+    nextBtn.textContent = 'Continue →';
+    hint.textContent = 'Step 4 of 5 — schedule (optional)';
+    const parts = modalData.cron.split(' ');
+    body.innerHTML = `<div class="step-panel">
+      <div class="msec-label">Auto-deploy schedule</div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px">
+          <div class="toggle-track" id="sched-track" style="${modalData.scheduleEnabled?'background:var(--accent)':''}">
+            <div class="toggle-thumb" id="sched-thumb" style="${modalData.scheduleEnabled?'transform:translateX(16px)':''}"></div>
+          </div>
+          <span style="font-size:13px;color:var(--text2)" id="sched-label">${modalData.scheduleEnabled?'Schedule enabled':'Schedule disabled'}</span>
+        </label>
+      </div>
+      <div id="sched-form" style="${modalData.scheduleEnabled?'':'opacity:0.35;pointer-events:none'}">
+        <div class="msec-label">Quick presets</div>
+        <div class="cron-presets">
+          ${CRON_PRESETS.filter(p=>p.val!=='custom').map(p=>`
+            <button class="cron-preset" onclick="applyCronPreset('${p.val}')">${p.label}</button>`).join('')}
+        </div>
+        <div class="msec-label">Cron expression</div>
+        <div class="cron-fields">
+          ${['Minute','Hour','Day','Month','Weekday'].map((l,i)=>`
+            <div class="cron-field">
+              <div class="cron-flabel">${l}</div>
+              <input class="cron-input" id="cron-f-${i}" value="${parts[i]||'*'}" oninput="updateModalCron()">
+            </div>`).join('')}
+        </div>
+        <div class="cron-preview-box">
+          <span class="cron-expr" id="mcron-preview">${modalData.cron}</span>
+          <span class="cron-human" id="mcron-human">${humanizeCron(modalData.cron)}</span>
+        </div>
+      </div>
+    </div>`;
+    document.getElementById('sched-track').addEventListener('click', toggleSchedEnabled);
+  }
+
+  else if (modalStep === 5) {
+    nextBtn.textContent = '✓ Create app';
+    hint.textContent = 'Review your configuration';
+    const t = APP_TYPES.find(x=>x.id===modalData.type);
+    const envCount = modalData.envVars.filter(e=>e.key.trim()).length;
+    body.innerHTML = `<div class="step-panel">
+      <div class="review-section-title">Application</div>
+      <div class="review-block">
+        <div class="review-row"><span class="review-key">Name</span><span class="review-val accent">${escHtml(modalData.name||'—')}</span></div>
+        <div class="review-row"><span class="review-key">Type</span><span class="review-val">${t?t.name:'—'}</span></div>
+        <div class="review-row"><span class="review-key">Service manager</span><span class="review-val">systemd</span></div>
+      </div>
+      <div class="review-section-title">Repository</div>
+      <div class="review-block">
+        <div class="review-row"><span class="review-key">Repo</span><span class="review-val">${escHtml(modalData.repo||'—')}</span></div>
+        <div class="review-row"><span class="review-key">Branch</span><span class="review-val">${escHtml(modalData.branch||'main')}</span></div>
+        <div class="review-row"><span class="review-key">Auth</span><span class="review-val">${modalData.token?'Token configured':'Public repo'}</span></div>
+      </div>
+      <div class="review-section-title">Build & Deploy</div>
+      <div class="review-block">
+        <div class="review-row"><span class="review-key">Build cmd</span><span class="review-val">${escHtml(modalData.buildCmd||'—')}</span></div>
+        <div class="review-row"><span class="review-key">Output dir</span><span class="review-val">${escHtml(modalData.outputDir||'—')}</span></div>
+        <div class="review-row"><span class="review-key">Deploy to</span><span class="review-val accent">${escHtml(modalData.deployDir||'—')}</span></div>
+        <div class="review-row"><span class="review-key">Service</span><span class="review-val">${escHtml(modalData.serviceName||'—')}</span></div>
+        <div class="review-row"><span class="review-key">Port</span><span class="review-val">${escHtml(modalData.port||'—')}</span></div>
+        <div class="review-row"><span class="review-key">Env variables</span><span class="review-val">${envCount} configured</span></div>
+      </div>
+      <div class="review-section-title">Schedule</div>
+      <div class="review-block">
+        <div class="review-row"><span class="review-key">Auto deploy</span><span class="review-val ${modalData.scheduleEnabled?'accent':''}">${modalData.scheduleEnabled?'Enabled':'Disabled'}</span></div>
+        ${modalData.scheduleEnabled?`<div class="review-row"><span class="review-key">Cron</span><span class="review-val accent">${escHtml(modalData.cron)}</span></div>
+        <div class="review-row"><span class="review-key">Schedule</span><span class="review-val">${humanizeCron(modalData.cron)}</span></div>`:''}
+      </div>
+    </div>`;
+  }
+}
+
+function modalNext() {
+  if (modalStep === 1) {
+    if (!modalData.name.trim()) {
+      document.getElementById('m-name') && document.getElementById('m-name').focus();
+      shakeInput('m-name'); return;
+    }
+  }
+  if (modalStep === 2) {
+    if (!modalData.repo.trim()) { shakeInput('m-repo'); return; }
+    if (!modalData.branch.trim()) { shakeInput('m-branch'); return; }
+  }
+  if (modalStep === 3) {
+    if (!modalData.deployDir.trim()) { shakeInput('m-deploy'); return; }
+    if (!modalData.serviceName.trim()) { shakeInput('m-svc'); return; }
+  }
+  if (modalStep === TOTAL_STEPS) {
+    submitApp(); return;
+  }
+  modalStep++;
+  renderModalStep();
+  document.getElementById('modal-body').scrollTop = 0;
+}
+
+function modalBack() {
+  if (modalStep > 1) { modalStep--; renderModalStep(); }
+}
+
+function selectType(id) {
+  modalData.type = id;
+  const t = APP_TYPES.find(x=>x.id===id);
+  if (t) {
+    modalData.buildCmd = t.buildCmd;
+    modalData.outputDir = t.outputDir;
+    if (!modalData.envVars.filter(e=>e.key).length) {
+      modalData.envVars = id==='dotnet'
+        ? [{key:'ASPNETCORE_ENVIRONMENT',val:'Production'},{key:'',val:''}]
+        : [{key:'NODE_ENV',val:'production'},{key:'',val:''}];
+    }
+  }
+  // Update card highlight without full re-render
+  document.querySelectorAll('.type-card').forEach(el => el.classList.remove('selected'));
+  const cards = document.querySelectorAll('.type-card');
+  const idx = APP_TYPES.findIndex(x=>x.id===id);
+  if (cards[idx]) cards[idx].classList.add('selected');
+}
+
+function addEnvVar() {
+  const list = document.getElementById('env-list');
+  if (!list) return;
+  const i = modalData.envVars.length;
+  modalData.envVars.push({key:'',val:''});
+  const row = document.createElement('div');
+  row.className = 'env-row';
+  row.id = 'env-row-'+i;
+  row.innerHTML = `<input class="form-input" placeholder="KEY" value="" oninput="modalData.envVars[${i}].key=this.value">
+    <input class="form-input" placeholder="value" value="" oninput="modalData.envVars[${i}].val=this.value">
+    <button class="env-del" onclick="removeEnvVar(${i})">×</button>`;
+  list.appendChild(row);
+  row.querySelector('input').focus();
+}
+function removeEnvVar(i) {
+  modalData.envVars.splice(i,1);
+  // Re-render just the env list
+  const list = document.getElementById('env-list');
+  if (!list) return;
+  list.innerHTML = modalData.envVars.map((ev,idx)=>`
+    <div class="env-row" id="env-row-${idx}">
+      <input class="form-input" placeholder="KEY" value="${ev.key}" oninput="modalData.envVars[${idx}].key=this.value">
+      <input class="form-input" placeholder="value" value="${ev.val}" oninput="modalData.envVars[${idx}].val=this.value">
+      <button class="env-del" onclick="removeEnvVar(${idx})">×</button>
+    </div>`).join('');
+}
+
+function toggleSchedEnabled() {
+  modalData.scheduleEnabled = !modalData.scheduleEnabled;
+  const track = document.getElementById('sched-track');
+  const thumb = document.getElementById('sched-thumb');
+  const lbl = document.getElementById('sched-label');
+  const form = document.getElementById('sched-form');
+  if (track) track.style.background = modalData.scheduleEnabled ? 'var(--accent)' : '';
+  if (thumb) thumb.style.transform = modalData.scheduleEnabled ? 'translateX(16px)' : '';
+  if (lbl) lbl.textContent = modalData.scheduleEnabled ? 'Schedule enabled' : 'Schedule disabled';
+  if (form) form.style.cssText = modalData.scheduleEnabled ? '' : 'opacity:0.35;pointer-events:none';
+}
+
+function applyCronPreset(val) {
+  modalData.cron = val;
+  const parts = val.split(' ');
+  for (let i=0;i<5;i++) {
+    const el = document.getElementById('cron-f-'+i);
+    if (el) el.value = parts[i]||'*';
+  }
+  const prev = document.getElementById('mcron-preview');
+  const hum = document.getElementById('mcron-human');
+  if (prev) prev.textContent = val;
+  if (hum) hum.textContent = humanizeCron(val);
+}
+
+function updateModalCron() {
+  const parts = [];
+  for (let i=0;i<5;i++) {
+    const el = document.getElementById('cron-f-'+i);
+    parts.push(el ? el.value||'*' : '*');
+  }
+  modalData.cron = parts.join(' ');
+  const prev = document.getElementById('mcron-preview');
+  const hum = document.getElementById('mcron-human');
+  if (prev) prev.textContent = modalData.cron;
+  if (hum) hum.textContent = humanizeCron(modalData.cron);
+}
+
+function humanizeCron(cron) {
+  const map = {
+    '0 0 * * *':'Every day at midnight',
+    '0 2 * * *':'Every day at 02:00',
+    '0 4 * * *':'Every day at 04:00',
+    '0 */6 * * *':'Every 6 hours',
+    '0 2 * * 1':'Every Monday at 02:00',
+    '0 * * * *':'Every hour',
+    '30 2 * * *':'Every day at 02:30',
+    '0 3 * * 1':'Every Monday at 03:00',
+    '0 1 * * 0':'Every Sunday at 01:00',
+    '0 0 * * 0':'Every Sunday at midnight',
+    '* * * * *':'Every minute',
+  };
+  return map[cron] || 'Custom schedule';
+}
+
+function shakeInput(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.borderColor = 'var(--danger)';
+  el.style.animation = 'shake 0.3s ease';
+  el.focus();
+  setTimeout(()=>{ el.style.animation=''; el.style.borderColor=''; }, 600);
+}
+
+function submitApp() {
+  const steps = document.getElementById('modal-steps');
+  const footer = document.getElementById('modal-footer');
+  const body = document.getElementById('modal-body');
+  if (!body) return;
+  if (steps) steps.style.display = 'none';
+  if (footer) footer.style.display = 'none';
+  const t = APP_TYPES.find(x=>x.id===modalData.type);
+  body.innerHTML = `<div class="modal-success">
+    <div class="success-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-9" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="success-title">${escHtml(modalData.name)} added!</div>
+    <div class="success-sub">App registered as <code style="color:var(--accent2);font-family:var(--mono)">${escHtml(modalData.serviceName||modalData.name.toLowerCase().replace(/\s+/g,'-'))}</code>. First deploy will start shortly.</div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-primary" onclick="finalizeApp()">Go to dashboard</button>
+      <button class="btn btn-ghost" onclick="addAnotherApp()">Add another</button>
+    </div>
+  </div>`;
+
+  // Actually add the app to the list
+  const newApp = {
+    id: modalData.serviceName || modalData.name.toLowerCase().replace(/\s+/g,'-'),
+    name: modalData.name,
+    type: modalData.type,
+    icon: t ? t.icon : '??',
+    iconClass: t ? t.cls : 'icon-static',
+    branch: modalData.branch || 'main',
+    repo: modalData.repo.replace('https://github.com/','').replace('.git',''),
+    status: 'queued',
+    lastDeploy: 'Pending',
+    lastCommit: 'Initial deploy',
+    commitHash: '—',
+    duration: '—',
+    service: modalData.serviceName,
+    port: parseInt(modalData.port)||null,
+    url: modalData.port ? `http://localhost:${modalData.port}` : null,
+    schedule: { enabled: modalData.scheduleEnabled, cron: modalData.cron, label: humanizeCron(modalData.cron) },
+    history: [],
+  };
+  APPS.unshift(newApp);
+  selectedApp = newApp;
+  document.getElementById('queue-badge').textContent = APPS.filter(a=>a.status==='queued'||a.status==='running').length;
+}
+
+function finalizeApp() {
+  closeModal();
+  currentPage = 'dashboard';
+  render();
+}
+
+function addAnotherApp() {
+  openAddApp();
+}
+
+// shake keyframe
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}';
+document.head.appendChild(shakeStyle);
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  render();
+  // show offline badge if any server offline
+  const ob = document.getElementById('offline-badge');
+  const offlineCount = SERVERS.filter(s=>s.status!=='online').length;
+  if (ob && offlineCount) { ob.style.display = ''; ob.textContent = offlineCount; }
+});
+
+// Simulate progress for running app
+setInterval(()=>{
+  const running = APPS.filter(a=>a.status==='running');
+  running.forEach(app=>{
+    if(app.progress<97) {
+      app.progress = Math.min((app.progress||50)+1, 97);
+      const rows = document.querySelectorAll('.deploy-progress');
+      const idx = APPS.indexOf(app);
+      if (rows[idx]) rows[idx].style.width = app.progress+'%';
+    }
+  });
+}, 1000);
+</script>
+</body>
+</html>
