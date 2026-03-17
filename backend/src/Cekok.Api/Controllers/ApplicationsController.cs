@@ -21,19 +21,32 @@ public static class ApplicationsController
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+            List<Application> apps;
             if (role == "admin")
-                return Results.Ok(await db.Applications.ToListAsync(ct));
+            {
+                apps = await db.Applications.ToListAsync(ct);
+            }
+            else
+            {
+                var accessibleServerIds = await db.UserServerAccesses
+                    .Where(a => a.UserId == userId)
+                    .Select(a => a.ServerId)
+                    .ToListAsync(ct);
+                var accessibleAppIds = await db.DeployTargets
+                    .Where(t => accessibleServerIds.Contains(t.ServerId))
+                    .Select(t => t.AppId)
+                    .Distinct()
+                    .ToListAsync(ct);
+                apps = await db.Applications.Where(a => accessibleAppIds.Contains(a.Id)).ToListAsync(ct);
+            }
 
-            var accessibleServerIds = await db.UserServerAccesses
-                .Where(a => a.UserId == userId)
-                .Select(a => a.ServerId)
-                .ToListAsync(ct);
-            var accessibleAppIds = await db.DeployTargets
-                .Where(t => accessibleServerIds.Contains(t.ServerId))
-                .Select(t => t.AppId)
-                .Distinct()
-                .ToListAsync(ct);
-            var apps = await db.Applications.Where(a => accessibleAppIds.Contains(a.Id)).ToListAsync(ct);
+            var appIds = apps.Select(a => a.Id).ToList();
+            var allTargets = await db.DeployTargets.Where(t => appIds.Contains(t.AppId)).ToListAsync(ct);
+            foreach (var a in apps)
+            {
+                a.DeployTargets = allTargets.Where(t => t.AppId == a.Id).ToList();
+            }
+            
             return Results.Ok(apps);
         });
 
@@ -111,7 +124,10 @@ public static class ApplicationsController
         group.MapGet("/{id}", async (string id, CekokDbContext db, CancellationToken ct) =>
         {
             var app = await db.Applications.FindAsync([id], ct);
-            return app is null ? Results.NotFound() : Results.Ok(app);
+            if (app is null) return Results.NotFound();
+            
+            app.DeployTargets = await db.DeployTargets.Where(t => t.AppId == id).ToListAsync(ct);
+            return Results.Ok(app);
         });
 
         // PUT /api/applications/{id}

@@ -88,6 +88,9 @@ public class Application
     public string? ScheduleCron { get; set; }
     public bool ScheduleEnabled { get; set; } = false;
     public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("O");
+
+    [NotMapped]
+    public List<DeployTarget> DeployTargets { get; set; } = new();
 }
 
 public class DeployTarget

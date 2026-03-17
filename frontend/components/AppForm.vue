@@ -49,228 +49,22 @@
 
         <template v-else>
           <!-- Step 1: App Type -->
-          <div v-if="currentStep === 1" class="step-panel">
-            <div class="msec-label">App runtime</div>
-            <div class="type-grid">
-              <div 
-                v-for="t in APP_TYPES" 
-                :key="t.id"
-                class="type-card" 
-                :class="{ selected: form.type === t.id }"
-                @click="selectType(t.id)"
-              >
-                <div class="type-card-icon" :class="t.cls">{{ t.icon }}</div>
-                <div class="type-card-name">{{ t.name }}</div>
-                <div class="type-card-desc">{{ t.desc }}</div>
-              </div>
-            </div>
-            <div class="msec-label">Display name</div>
-            <div class="form-group">
-              <label class="form-label">App name <span>*</span></label>
-              <input v-model="form.name" class="form-input" placeholder="e.g. HRDesk API" ref="nameInput">
-            </div>
-          </div>
+          <AppFormTypeTab v-if="currentStep === 1" :form="form" :app-types="APP_TYPES" @select-type="selectType" />
 
           <!-- Step 2: Repository -->
-          <div v-if="currentStep === 2" class="step-panel">
-            <div class="msec-label">GitHub repository</div>
-            <div class="form-group">
-              <label class="form-label">Repository URL <span>*</span></label>
-              <input v-model="form.repoUrl" class="form-input" placeholder="https://github.com/org/repo.git">
-              <div class="form-hint">Public or private repo. Use HTTPS URL.</div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Branch <span>*</span></label>
-                <input v-model="form.branch" class="form-input" placeholder="main">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Deploy trigger</label>
-                <select v-model="form.trigger" class="form-select">
-                  <option value="manual">Manual only</option>
-                  <option value="webhook">GitHub webhook push</option>
-                  <option value="schedule">Schedule (cron)</option>
-                  <option value="both">Webhook + Schedule</option>
-                </select>
-              </div>
-            </div>
-            <div class="msec-label" style="margin-top:16px">Authentication</div>
-            <div class="form-group">
-              <label class="form-label">Personal access token</label>
-              <input v-model="form.token" class="form-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-              <div class="form-hint">Required for private repos. Stored encrypted on server.</div>
-            </div>
-          </div>
+          <AppFormRepoTab v-if="currentStep === 2" :form="form" />
 
           <!-- Step 3: Build & Deploy -->
-          <div v-if="currentStep === 3" class="step-panel">
-            <div class="msec-label">Build</div>
-            <div class="form-group">
-              <label class="form-label">Build command</label>
-              <input v-model="form.buildCmd" class="form-input" :placeholder="currentType?.buildCmd">
-              <div class="form-hint">Runs inside the cloned repo directory.</div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Build output dir</label>
-                <input v-model="form.outputDir" class="form-input" :placeholder="currentType?.outputDir">
-              </div>
-            </div>
-
-            <!-- Deploy targets: multi-server -->
-            <div class="msec-label" style="margin-top:20px">
-              Deploy targets
-              <span class="target-badge">{{ form.deployTargets.length }} server{{ form.deployTargets.length !== 1 ? 's' : '' }}</span>
-            </div>
-
-            <div v-if="serversCtx.loading" class="servers-loading">Loading servers…</div>
-            <div v-else-if="serversCtx.servers.length === 0" class="servers-empty">No servers registered yet.</div>
-            <div v-else class="server-target-list">
-              <div
-                v-for="srv in serversCtx.servers"
-                :key="srv.id"
-                class="server-target-item"
-                :class="{ selected: isTargetServer(srv.id) }"
-              >
-                <!-- Header row: toggle + server info -->
-                <div class="sti-header" @click="toggleTargetServer(srv.id)">
-                  <div class="sti-check" :class="{ checked: isTargetServer(srv.id) }">
-                    <svg v-if="isTargetServer(srv.id)" width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </div>
-                  <div class="sti-info">
-                    <div class="sti-name">{{ srv.name }}</div>
-                    <div class="sti-ip">{{ srv.ip }} · {{ srv.role }}</div>
-                  </div>
-                  <div v-if="isTargetServer(srv.id)" class="sti-configured">configured ✓</div>
-                </div>
-
-                <!-- Per-server config (only when selected) -->
-                <div v-if="isTargetServer(srv.id)" class="sti-config">
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label">Deploy dir <span>*</span></label>
-                      <input v-model="getTarget(srv.id).deployDir" class="form-input form-input-sm" placeholder="/var/www/my-app">
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label">Service name</label>
-                      <input v-model="getTarget(srv.id).serviceName" class="form-input form-input-sm" placeholder="my-app">
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label">Port</label>
-                      <input v-model="getTarget(srv.id).port" class="form-input form-input-sm" type="number" placeholder="5000">
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label">Health check URL</label>
-                      <input v-model="getTarget(srv.id).healthCheckUrl" class="form-input form-input-sm" placeholder="http://localhost:5000/health">
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="msec-label" style="margin-top:20px">Environment variables</div>
-            <div class="env-list">
-              <div v-for="(ev, i) in form.envVars" :key="i" class="env-row">
-                <input v-model="ev.key" class="form-input" placeholder="KEY">
-                <input v-model="ev.val" class="form-input" placeholder="value">
-                <button class="env-del" @click="removeEnvVar(i)">×</button>
-              </div>
-            </div>
-            <button class="add-row-btn" @click="addEnvVar">
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              Add variable
-            </button>
-          </div>
+          <AppFormBuildTab v-if="currentStep === 3" :form="form" :current-type="currentType" :servers-ctx="serversCtx" @toggle-target="toggleTargetServer" @add-env="addEnvVar" @remove-env="removeEnvVar" />
 
           <!-- Step 4: Settings -->
-          <div v-if="currentStep === 4" class="step-panel">
-            <div class="msec-label">Config Files</div>
-            <div class="form-hint" style="margin-bottom:12px;">Create config files (e.g. appsettings.json) that will be written to the app root directory during deploy.</div>
-            <div class="setting-files-list">
-              <div v-for="(sf, i) in form.settingFiles" :key="i" class="setting-file-row">
-                <div class="setting-file-header">
-                  <input v-model="sf.filePath" class="form-input form-input-sm" placeholder="e.g. appsettings.json or google/fcm.json">
-                  <button class="env-del" @click="removeSettingFile(i)">×</button>
-                </div>
-                <textarea v-model="sf.content" class="form-input form-textarea" placeholder="File content..."></textarea>
-              </div>
-            </div>
-            <button class="add-row-btn" @click="addSettingFile">
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              Add config file
-            </button>
-          </div>
+          <AppFormSettingsTab v-if="currentStep === 4" :form="form" @add-setting="addSettingFile" @remove-setting="removeSettingFile" />
 
           <!-- Step 5: Schedule -->
-          <div v-if="currentStep === 5" class="step-panel">
-            <div class="msec-label">Auto-deploy schedule</div>
-            <div class="form-group">
-              <div class="toggle-row" @click="form.scheduleEnabled = !form.scheduleEnabled">
-                <div class="toggle-track" :class="{ enabled: form.scheduleEnabled }">
-                  <div class="toggle-thumb" :class="{ enabled: form.scheduleEnabled }"></div>
-                </div>
-                <span class="toggle-label">{{ form.scheduleEnabled ? 'Schedule enabled' : 'Schedule disabled' }}</span>
-              </div>
-            </div>
-            <div v-if="form.scheduleEnabled" class="schedule-form">
-              <div class="msec-label">Quick presets</div>
-              <div class="cron-presets">
-                <button 
-                  v-for="p in CRON_PRESETS" 
-                  :key="p.val" 
-                  class="cron-preset" 
-                  @click="applyCronPreset(p.val)"
-                >
-                  {{ p.label }}
-                </button>
-              </div>
-              <div class="msec-label">Cron expression</div>
-              <div class="cron-fields">
-                <div v-for="(field, i) in ['Minute','Hour','Day','Month','Weekday']" :key="field" class="cron-field">
-                  <div class="cron-flabel">{{ field }}</div>
-                  <input v-model="cronParts[i]" class="cron-input" @input="updateCronFromParts">
-                </div>
-              </div>
-              <div class="cron-preview-box">
-                <span class="cron-expr">{{ form.scheduleCron }}</span>
-                <span class="cron-human">{{ humanizeCron(form.scheduleCron) }}</span>
-              </div>
-            </div>
-          </div>
+          <AppFormScheduleTab v-if="currentStep === 5" :form="form" :cron-presets="CRON_PRESETS" />
 
           <!-- Step 6: Review -->
-          <div v-if="currentStep === 6" class="step-panel">
-            <div class="review-section-title">Application</div>
-            <div class="review-block">
-              <div class="review-row"><span class="review-key">Name</span><span class="review-val accent">{{ form.name }}</span></div>
-              <div class="review-row"><span class="review-key">Type</span><span class="review-val">{{ currentType?.name }}</span></div>
-            </div>
-            <div class="review-section-title">Repository</div>
-            <div class="review-block">
-              <div class="review-row"><span class="review-key">Repo</span><span class="review-val">{{ form.repoUrl }}</span></div>
-              <div class="review-row"><span class="review-key">Branch</span><span class="review-val">{{ form.branch }}</span></div>
-            </div>
-            <div class="review-section-title">Build</div>
-            <div class="review-block">
-              <div class="review-row"><span class="review-key">Build cmd</span><span class="review-val">{{ form.buildCmd || currentType?.buildCmd }}</span></div>
-              <div class="review-row"><span class="review-key">Output dir</span><span class="review-val">{{ form.outputDir || currentType?.outputDir || '—' }}</span></div>
-            </div>
-            <div class="review-section-title">Deploy targets ({{ form.deployTargets.length }})</div>
-            <div v-if="form.deployTargets.length === 0" class="review-block">
-              <div class="review-row" style="color:var(--text3)">No servers selected</div>
-            </div>
-            <div v-for="t in form.deployTargets" :key="t.serverId" class="review-block" style="margin-bottom:6px">
-              <div class="review-row">
-                <span class="review-key">Server</span>
-                <span class="review-val accent">{{ serverName(t.serverId) }}</span>
-              </div>
-              <div class="review-row"><span class="review-key">Deploy dir</span><span class="review-val">{{ t.deployDir || '—' }}</span></div>
-              <div class="review-row"><span class="review-key">Service</span><span class="review-val">{{ t.serviceName || '—' }}</span></div>
-              <div class="review-row" v-if="t.port"><span class="review-key">Port</span><span class="review-val">{{ t.port }}</span></div>
-            </div>
-          </div>
+          <AppFormReviewTab v-if="currentStep === 6" :form="form" :current-type="currentType" :server-name="serverName" />
         </template>
       </div>
 
@@ -379,8 +173,6 @@ const toggleTargetServer = (serverId) => {
 const serverName = (serverId) =>
   serversCtx.servers.find(s => s.id === serverId)?.name ?? serverId
 
-const cronParts = ref(form.value.scheduleCron.split(' '))
-
 const currentType = computed(() => APP_TYPES.find(t => t.id === form.value.type))
 
 const footerHint = computed(() => `Step ${currentStep.value} of ${totalSteps} — ${stepLabels[currentStep.value-1].toLowerCase()}`)
@@ -399,27 +191,6 @@ const removeEnvVar = (i) => form.value.envVars.splice(i, 1)
 
 const addSettingFile = () => form.value.settingFiles.push({ filePath: '', content: '' })
 const removeSettingFile = (i) => form.value.settingFiles.splice(i, 1)
-
-const applyCronPreset = (val) => {
-  form.value.scheduleCron = val
-  cronParts.value = val.split(' ')
-}
-
-const updateCronFromParts = () => {
-  form.value.scheduleCron = cronParts.value.join(' ')
-}
-
-const humanizeCron = (cron) => {
-  const map = {
-    '0 0 * * *': 'Every day at midnight',
-    '0 2 * * *': 'Every day at 02:00',
-    '0 */6 * * *': 'Every 6 hours',
-    '0 2 * * 1': 'Every Monday at 02:00',
-    '0 * * * *': 'Every hour',
-    '30 2 * * *': 'Every day at 02:30',
-  }
-  return map[cron] || 'Custom schedule'
-}
 
 const nextStep = () => {
   if (currentStep.value < totalSteps) {
@@ -508,7 +279,7 @@ const resetForm = () => {
 }
 </script>
 
-<style scoped>
+<style>
 .modal-overlay {
   position: fixed; inset: 0; z-index: 1000;
   background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);

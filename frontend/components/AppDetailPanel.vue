@@ -91,10 +91,10 @@
       </div>
 
       <div v-if="activeTab === 'targets'" class="tab-targets">
-        <div v-if="!app.targets?.length" class="empty-targets">No deploy targets configured.</div>
-        <div v-for="target in app.targets" :key="target.serverId" class="target-card">
+        <div v-if="!app.deployTargets?.length" class="empty-targets">No deploy targets configured.</div>
+        <div v-for="target in app.deployTargets" :key="target.serverId" class="target-card">
           <div class="target-head">
-            <div class="target-server">Server: {{ target.serverId }}</div>
+            <div class="target-server">Server: {{ getServerName(target.serverId) }}</div>
             <div v-if="target.port" class="target-port">Port: {{ target.port }}</div>
           </div>
           <div class="target-path">Path: <code>{{ target.deployDir }}</code></div>
@@ -114,6 +114,18 @@ const props = defineProps({
 
 const emit = defineEmits(['deploy', 'edit'])
 const activeTab = ref('overview')
+
+const serversCtx = useServers()
+
+onMounted(() => {
+  if (serversCtx.servers.length === 0) {
+    serversCtx.fetchServers()
+  }
+})
+
+const getServerName = (serverId) => {
+  return serversCtx.servers.find(s => s.id === serverId)?.name || serverId
+}
 
 const tabs = [
   { id: 'overview', label: 'Overview' },
