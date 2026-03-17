@@ -85,6 +85,12 @@ export const useAuthStore = defineStore('auth', {
       return this.accessToken
         ? { Authorization: `Bearer ${this.accessToken}` }
         : {}
+    },
+
+    handleError(error: any) {
+      if (error?.response?.status === 401) {
+        this.logout()
+      }
     }
   }
 })

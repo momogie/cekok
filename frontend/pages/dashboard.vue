@@ -60,14 +60,16 @@ const servers = computed(() => serversData.value || [])
 const deploy = async (id) => {
   if (!confirm('Trigger deploy for this app?')) return
   try {
-    const res = await $fetch(`/api/deploy/${id}`, {
+    const res = await useNuxtApp().$apiFetch(`/api/deploy/${id}`, {
       method: 'POST',
       baseURL: config.public.apiBase,
       headers: auth.authHeaders()
     })
     alert('Deploy triggered! Job ID: ' + res.id)
   } catch (e) {
-    alert('Failed: ' + e.message)
+    if (e.response?.status !== 401) {
+      alert('Failed: ' + e.message)
+    }
   }
 }
 </script>

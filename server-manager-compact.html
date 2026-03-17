@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ServerKit — Infrastructure Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0:#0d0f14; --bg1:#13161e; --bg2:#1a1e28; --bg3:#222636;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text1:#e8eaf0; --text2:#8b8fa8; --text3:#4e5268;
+  --accent:#00c9a7; --accent2:#0097ff; --warn:#f0a500; --danger:#f05060; --purple:#8b7fff;
+  --r:8px; --r-sm:5px;
+  --font:'Sora',sans-serif; --mono:'JetBrains Mono',monospace;
+  --sb:188px; --tr:0.15s ease;
+}
+[data-theme="light"] {
+  --bg0:#f0f2f7; --bg1:#fff; --bg2:#f5f6fa; --bg3:#eaecf3;
+  --border:rgba(0,0,0,0.07); --border2:rgba(0,0,0,0.13);
+  --text1:#1a1d2e; --text2:#5a5e7a; --text3:#a0a4b8;
+  --accent:#009e84; --accent2:#0077cc; --warn:#d08800; --danger:#d03040;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:var(--font);background:var(--bg0);color:var(--text1);font-size:13px;line-height:1.4;transition:background var(--tr),color var(--tr)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+/* ── Shell ── */
+.shell{display:flex;height:100vh;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{width:var(--sb);flex-shrink:0;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:background var(--tr)}
+.sb-logo{padding:12px 12px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.logo-ic{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.logo-tx{font-size:13px;font-weight:600;letter-spacing:-0.3px}
+.logo-tx span{color:var(--accent)}
+.sb-nav{flex:1;padding:6px 6px;overflow-y:auto}
+.nav-sec{margin-bottom:12px}
+.nav-lbl{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);padding:0 7px;margin-bottom:2px}
+.ni{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:var(--r-sm);color:var(--text2);cursor:pointer;transition:all var(--tr);font-size:12px;user-select:none}
+.ni:hover{background:var(--bg2);color:var(--text1)}
+.ni.active{background:rgba(0,201,167,0.1);color:var(--accent);font-weight:500}
+.ni-ico{width:14px;height:14px;flex-shrink:0;opacity:0.8}
+.ni .bdg{margin-left:auto;font-size:9px;font-weight:600;background:var(--danger);color:#fff;border-radius:99px;padding:1px 5px}
+.ni .bdg-w{margin-left:auto;font-size:9px;font-weight:600;background:var(--warn);color:#fff;border-radius:99px;padding:1px 5px}
+.sb-foot{padding:6px 6px;border-top:1px solid var(--border)}
+.th-tog{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:var(--r-sm);cursor:pointer;color:var(--text2);font-size:12px;transition:all var(--tr)}
+.th-tog:hover{background:var(--bg2);color:var(--text1)}
+.tog-track{width:28px;height:15px;border-radius:99px;background:var(--bg3);border:1px solid var(--border2);position:relative;transition:background var(--tr);margin-left:auto;flex-shrink:0}
+[data-theme="light"] .tog-track{background:var(--accent)}
+.tog-thumb{position:absolute;top:2px;left:2px;width:9px;height:9px;border-radius:50%;background:#fff;transition:transform var(--tr)}
+[data-theme="light"] .tog-thumb{transform:translateX(13px)}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:44px;flex-shrink:0;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;transition:background var(--tr)}
+.topbar-title{font-size:13px;font-weight:600}
+.topbar-sub{font-size:11px;color:var(--text3);margin-left:4px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:7px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:var(--r-sm);font-size:11px;font-weight:500;cursor:pointer;border:none;font-family:var(--font);transition:all var(--tr)}
+.btn-primary{background:var(--accent);color:#0d1814}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{color:var(--text1);background:var(--bg2)}
+.btn-danger{background:rgba(240,80,96,.15);color:var(--danger);border:1px solid rgba(240,80,96,.25)}
+.btn-danger:hover{background:rgba(240,80,96,.25)}
+
+.content{flex:1;overflow-y:auto;padding:14px}
+
+/* ── Stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.stat-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px;display:flex;align-items:center;gap:10px;animation:fadeUp .3s ease both;transition:background var(--tr)}
+.stat-card:nth-child(1){animation-delay:.04s}.stat-card:nth-child(2){animation-delay:.08s}.stat-card:nth-child(3){animation-delay:.12s}.stat-card:nth-child(4){animation-delay:.16s}.stat-card:nth-child(5){animation-delay:.20s}
+.stat-ic{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stat-info{min-width:0}
+.stat-label{font-size:10px;font-weight:500;letter-spacing:.4px;text-transform:uppercase;color:var(--text3)}
+.stat-val{font-size:20px;font-weight:600;font-family:var(--mono);letter-spacing:-1px;line-height:1.2}
+.stat-val.green{color:var(--accent)}.stat-val.warn{color:var(--warn)}.stat-val.red{color:var(--danger)}.stat-val.blue{color:var(--accent2)}.stat-val.purple{color:var(--purple)}
+.stat-meta{font-size:10px;color:var(--text3);margin-top:1px}
+
+/* ── Grid ── */
+.grid-main{display:grid;grid-template-columns:1fr 320px;gap:12px}
+
+/* ── Panel ── */
+.panel{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:background var(--tr)}
+.ph{padding:9px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.ph-title{font-size:12px;font-weight:600}
+.ph-sub{font-size:10px;color:var(--text3);margin-left:auto}
+.ph-acts{margin-left:auto;display:flex;gap:6px;align-items:center}
+
+/* ── Server rows ── */
+.srv-row{padding:7px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer;transition:background var(--tr)}
+.srv-row:last-child{border-bottom:none}
+.srv-row:hover{background:var(--bg2)}
+.srv-row.sel{background:rgba(0,201,167,.05);border-left:2px solid var(--accent)}
+
+.srv-av{width:28px;height:28px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:var(--mono)}
+.av-web{background:rgba(0,201,167,.12);color:var(--accent)}
+.av-db{background:rgba(240,165,0,.12);color:var(--warn)}
+.av-proxy{background:rgba(0,151,255,.12);color:var(--accent2)}
+.av-worker{background:rgba(139,127,255,.12);color:var(--purple)}
+.av-cache{background:rgba(240,80,96,.10);color:var(--danger)}
+
+.srv-info{flex:1;min-width:0}
+.srv-name{font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px}
+.srv-meta{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:1px}
+
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sdot-g{background:var(--accent);box-shadow:0 0 5px var(--accent)}
+.sdot-y{background:var(--warn);box-shadow:0 0 5px var(--warn)}
+.sdot-r{background:var(--danger);box-shadow:0 0 5px var(--danger)}
+.sdot-x{background:var(--text3)}
+
+.rpill{font-size:9px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:99px;flex-shrink:0}
+.rp-web{background:rgba(0,201,167,.12);color:var(--accent)}
+.rp-db{background:rgba(240,165,0,.12);color:var(--warn)}
+.rp-proxy{background:rgba(0,151,255,.12);color:var(--accent2)}
+.rp-worker{background:rgba(139,127,255,.12);color:var(--purple)}
+.rp-cache{background:rgba(240,80,96,.10);color:var(--danger)}
+
+/* Mini bars */
+.mbars{display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+.mrow{display:flex;align-items:center;gap:4px}
+.mlbl{font-size:9px;color:var(--text3);width:16px}
+.mbar{width:48px;height:3px;background:var(--bg3);border-radius:99px;overflow:hidden}
+.mfill{height:100%;border-radius:99px}
+.mf-lo{background:var(--accent)}.mf-md{background:var(--warn)}.mf-hi{background:var(--danger)}
+.mpct{font-size:9px;font-family:var(--mono);color:var(--text3);width:26px;text-align:right}
+
+/* ── Detail panel ── */
+.det-hdr{padding:11px 13px;border-bottom:1px solid var(--border)}
+.det-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.det-meta{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.det-row{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;align-items:center}
+.upbadge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-family:var(--mono);color:var(--accent);background:rgba(0,201,167,.08);border:1px solid rgba(0,201,167,.15);border-radius:99px;padding:2px 8px}
+.tag{font-size:9px;padding:1px 6px;border-radius:4px;background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.det-btns{display:flex;gap:5px;margin-top:8px}
+
+.dtabs{display:flex;border-bottom:1px solid var(--border)}
+.dtab{padding:7px 11px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all var(--tr)}
+.dtab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.dtab:hover:not(.active){color:var(--text1)}
+
+/* ── Resource cards ── */
+.res-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:10px 12px}
+.rc{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:8px 10px}
+.rc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.rc-lbl{font-size:9px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.rc-val{font-size:15px;font-weight:600;font-family:var(--mono)}
+.rc-bar{height:4px;background:var(--bg3);border-radius:99px;overflow:hidden}
+.rc-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.rc-sub{font-size:9px;color:var(--text3);margin-top:4px;font-family:var(--mono)}
+
+/* spark */
+.spark-wrap{padding:0 12px 10px;height:36px}
+.spark-wrap svg{width:100%;height:100%}
+
+/* io row */
+.io-row{display:flex;gap:0;border-top:1px solid var(--border)}
+.io-item{flex:1;padding:8px 12px;border-right:1px solid var(--border)}
+.io-item:last-child{border-right:none}
+.io-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.io-val{font-size:14px;font-weight:600;font-family:var(--mono)}
+
+/* ── Processes ── */
+.proc-list{padding:0}
+.proc-hdr,.proc-row-item{display:flex;align-items:center;gap:0;padding:5px 12px;border-bottom:1px solid var(--border);font-size:10px}
+.proc-hdr{color:var(--text3);font-family:var(--mono);padding:5px 12px 4px}
+.proc-row-item:hover{background:var(--bg2)}
+.proc-row-item:last-child{border-bottom:none}
+.pc-name{flex:1;font-family:var(--mono);color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;padding-right:8px}
+.pc-pid{width:36px;font-family:var(--mono);color:var(--text3);flex-shrink:0}
+.pc-cpu{width:36px;font-family:var(--mono);text-align:right;flex-shrink:0}
+.pc-mem{width:40px;font-family:var(--mono);color:var(--text3);text-align:right;flex-shrink:0}
+
+/* ── Network ── */
+.net-row{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--border);font-size:10px}
+.net-row:last-child{border-bottom:none}
+.net-if{font-family:var(--mono);color:var(--accent2);width:48px;flex-shrink:0}
+.net-tx{font-family:var(--mono);color:var(--text2);flex:1}
+.net-rx{font-family:var(--mono);color:var(--text3);flex:1}
+.port-row{display:flex;align-items:center;gap:0;padding:5px 12px;border-bottom:1px solid var(--border);font-size:10px}
+.port-row:last-child{border-bottom:none}
+.port-name{flex:1;color:var(--text2)}
+.port-num{width:44px;font-family:var(--mono);color:var(--accent2)}
+.port-conn{width:40px;font-family:var(--mono);text-align:right;color:var(--text3)}
+
+/* ── Log ── */
+.log-pane{background:var(--bg0);padding:10px 12px;font-family:var(--mono);font-size:10px;line-height:1.7;max-height:260px;overflow-y:auto;color:var(--text2)}
+.ll{display:flex;gap:8px}
+.lts{color:var(--text3);flex-shrink:0}
+.lok{color:var(--accent)}.lw{color:var(--warn)}.ler{color:var(--danger)}.lcmd{color:var(--purple)}
+.lcur{display:inline-block;width:6px;height:10px;background:var(--accent);margin-left:2px;vertical-align:middle;animation:blink 1s step-end infinite}
+
+/* ── Bottom ── */
+.grid-bot{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.alert-row{display:flex;align-items:flex-start;gap:8px;padding:7px 13px;border-bottom:1px solid var(--border);font-size:11px;cursor:pointer;transition:background var(--tr)}
+.alert-row:hover{background:var(--bg2)}
+.alert-row:last-child{border-bottom:none}
+.adot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.abody{flex:1;min-width:0}
+.atitle{font-weight:500;color:var(--text1);font-size:11px}
+.ameta{font-size:10px;color:var(--text3);margin-top:1px;font-family:var(--mono)}
+.atime{font-size:10px;color:var(--text3);font-family:var(--mono);flex-shrink:0}
+
+/* ── Add server row ── */
+.add-row{padding:7px 13px;border-top:1px solid var(--border);display:flex;align-items:center;gap:7px;color:var(--text3);cursor:pointer;font-size:11px;transition:all var(--tr)}
+.add-row:hover{color:var(--accent);background:var(--bg2)}
+
+/* ── Modal ── */
+.modal-ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s ease}
+.modal-ov.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r);width:480px;max-width:94vw;animation:fadeUp .2s ease}
+.m-hdr{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.m-title{font-size:13px;font-weight:600;flex:1}
+.m-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:17px;padding:0 4px;transition:color var(--tr)}
+.m-close:hover{color:var(--text1)}
+.m-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.m-foot{padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:7px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.flbl{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.finp,.fsel{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:6px 9px;color:var(--text1);font-size:11px;font-family:var(--mono);outline:none;transition:border-color var(--tr);width:100%}
+.finp:focus,.fsel:focus{border-color:var(--accent)}
+.fsel option{background:var(--bg2)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fhint{font-size:10px;color:var(--text3)}
+
+/* ── Anims ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulse-anim{animation:pulse 1.6s infinite}
+
+@media(max-width:1100px){.stats-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.grid-main,.grid-bot{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="logo-ic">SK</div>
+      <div class="logo-tx">Server<span>Kit</span></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nav-sec">
+        <div class="nav-lbl">Overview</div>
+        <div class="ni active">
+          <svg class="ni-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="4" rx="1"/><rect x="1" y="9" width="14" height="4" rx="1"/><circle cx="13" cy="4" r=".7" fill="currentColor" stroke="none"/><circle cx="13" cy="11" r=".7" fill="currentColor" stroke="none"/></svg>
+          Servers
+        </div>
+        <div class="ni">
+          <svg class="ni-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,12 4,8 7,10 10,5 13,7 15,4"/></svg>
+          Monitoring
+        </div>
+        <div class="ni">
+          <svg class="ni-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1a5 5 0 0 1 5 5v3l1.5 2H1.5L3 9V6a5 5 0 0 1 5-5z"/><path d="M6.5 13.5a1.5 1.5 0 0 0 3 0"/></svg>
+          Alerts
+          <span class="bdg">3</span>
+        </div>
+      </div>
+      <div class="nav-sec">
+        <div class="nav-lbl">Infrastructure</div>
+        <div class="ni">
+          <svg class="ni-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5"/><line x1="8" y1="3" x2="8" y2="13"/><path d="M3 8 Q6 5 8 8 Q10 11 13 8"/></svg>
+          Network
+        </div>
+        <div class="ni">
+          <svg class="ni-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="8" cy="4" rx="6" ry="2"/><path d="M2 4v4c0 1.1 2.7 2 6 2s6-.9 6-2V4"/><path d="M2 8v4c0 1.1 2.7 2 6 2s6-.9 6-2V8"/></svg>
+          Storage
+        </div>
+        <div class="ni">
+          <svg class="ni-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1 L14 4 V9 C14 12.5 8 15 8 15 C8 15 2 12.5 2 9 V4 Z"/><polyline points="5,8 7,10 11,6"/></svg>
+          Firewall
+          <span class="bdg-w">5</span>
+        </div>
+        <div class="ni">
+          <svg class="ni-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="9" rx="2"/><path d="M4 9 l2-1.5 L4 6" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="9" x2="12" y2="9"/></svg>
+          SSH Keys
+        </div>
+      </div>
+      <div class="nav-sec">
+        <div class="nav-lbl">System</div>
+        <div class="ni">
+          <svg class="ni-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.4 1.4M11.55 11.55l1.4 1.4M3.05 12.95l1.4-1.4M11.55 4.45l1.4-1.4"/><circle cx="8" cy="8" r="2.5"/></svg>
+          Settings
+        </div>
+        <div class="ni">
+          <svg class="ni-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+          Team
+        </div>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <div class="th-tog" onclick="toggleTheme()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3.5"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.9 11.9l1.06 1.06M3.05 12.95l1.06-1.06M11.9 4.1l1.06-1.06"/></svg>
+        Appearance
+        <div class="tog-track"><div class="tog-thumb"></div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">Server Manager</div>
+      <span class="topbar-sub">12 servers · 3 regions</span>
+      <div class="topbar-right">
+        <button class="btn btn-ghost" onclick="openModal()">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
+          Add Server
+        </button>
+        <button class="btn btn-ghost">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 4h14M1 8h10M1 12h6"/></svg>
+          Filter
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-ic" style="background:rgba(0,201,167,.1)">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.8"><rect x="1" y="3" width="14" height="5" rx="1"/><rect x="1" y="10" width="14" height="3" rx="1"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">Online</div>
+            <div class="stat-val green">10<span style="font-size:11px;color:var(--text3)"> /12</span></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-ic" style="background:rgba(240,80,96,.1)">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--danger)" stroke-width="1.8"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="9"/><circle cx="8" cy="11" r=".8" fill="var(--danger)" stroke="none"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">Incidents</div>
+            <div class="stat-val red">2</div>
+            <div class="stat-meta">critical</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-ic" style="background:rgba(0,151,255,.1)">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--accent2)" stroke-width="1.8"><polyline points="1,13 4,9 7,11 10,6 13,8 15,4"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">Avg CPU</div>
+            <div class="stat-val blue">34<span style="font-size:11px">%</span></div>
+            <div class="stat-meta">↓ 5% vs yday</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-ic" style="background:rgba(139,127,255,.1)">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--purple)" stroke-width="1.8"><rect x="2" y="3" width="12" height="9" rx="1"/><line x1="5" y1="14" x2="11" y2="14"/><line x1="8" y1="12" x2="8" y2="14"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">Avg RAM</div>
+            <div class="stat-val purple">61<span style="font-size:11px">%</span></div>
+            <div class="stat-meta">↑ 3% vs yday</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-ic" style="background:rgba(240,165,0,.1)">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.8"><path d="M13 8A5 5 0 1 1 3.05 5.5"/><path d="M13 1v4h-4"/></svg>
+          </div>
+          <div class="stat-info">
+            <div class="stat-label">Uptime</div>
+            <div class="stat-val warn">99.7<span style="font-size:11px">%</span></div>
+            <div class="stat-meta">30d avg</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main grid -->
+      <div class="grid-main">
+
+        <!-- Server list -->
+        <div class="panel">
+          <div class="ph">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.8"><rect x="1" y="2" width="14" height="4" rx="1"/><rect x="1" y="9" width="14" height="4" rx="1"/></svg>
+            <span class="ph-title">All Servers</span>
+            <span class="ph-sub">sorted by CPU ↓</span>
+          </div>
+
+          <div class="srv-row sel" onclick="selSrv(this)">
+            <div class="srv-av av-web">WB</div>
+            <div class="srv-info">
+              <div class="srv-name"><div class="sdot sdot-g"></div>prod-web-01<span class="rpill rp-web">web</span></div>
+              <div class="srv-meta">10.0.1.10 · Ubuntu 22.04 · sg-ap</div>
+            </div>
+            <div class="mbars">
+              <div class="mrow"><div class="mlbl">CPU</div><div class="mbar"><div class="mfill mf-md" style="width:72%"></div></div><div class="mpct">72%</div></div>
+              <div class="mrow"><div class="mlbl">RAM</div><div class="mbar"><div class="mfill mf-md" style="width:61%"></div></div><div class="mpct">61%</div></div>
+            </div>
+          </div>
+
+          <div class="srv-row" onclick="selSrv(this)">
+            <div class="srv-av av-cache">CA</div>
+            <div class="srv-info">
+              <div class="srv-name"><div class="sdot sdot-r pulse-anim"></div>prod-cache-01<span class="rpill rp-cache">cache</span></div>
+              <div class="srv-meta">10.0.1.40 · Redis 7.2 · sg-ap</div>
+            </div>
+            <div class="mbars">
+              <div class="mrow"><div class="mlbl">CPU</div><div class="mbar"><div class="mfill mf-hi" style="width:91%"></div></div><div class="mpct" style="color:var(--danger)">91%</div></div>
+              <div class="mrow"><div class="mlbl">RAM</div><div class="mbar"><div class="mfill mf-hi" style="width:95%"></div></div><div class="mpct" style="color:var(--danger)">95%</div></div>
+            </div>
+          </div>
+
+          <div class="srv-row" onclick="selSrv(this)">
+            <div class="srv-av av-worker">WK</div>
+            <div class="srv-info">
+              <div class="srv-name"><div class="sdot sdot-y"></div>prod-worker-01<span class="rpill rp-worker">worker</span></div>
+              <div class="srv-meta">10.0.1.30 · .NET 10 · sg-ap</div>
+            </div>
+            <div class="mbars">
+              <div class="mrow"><div class="mlbl">CPU</div><div class="mbar"><div class="mfill mf-md" style="width:55%"></div></div><div class="mpct">55%</div></div>
+              <div class="mrow"><div class="mlbl">RAM</div><div class="mbar"><div class="mfill mf-md" style="width:67%"></div></div><div class="mpct">67%</div></div>
+            </div>
+          </div>
+
+          <div class="srv-row" onclick="selSrv(this)">
+            <div class="srv-av av-db">DB</div>
+            <div class="srv-info">
+              <div class="srv-name"><div class="sdot sdot-g"></div>prod-db-01<span class="rpill rp-db">database</span></div>
+              <div class="srv-meta">10.0.1.20 · PostgreSQL 16 · sg-ap</div>
+            </div>
+            <div class="mbars">
+              <div class="mrow"><div class="mlbl">CPU</div><div class="mbar"><div class="mfill mf-lo" style="width:28%"></div></div><div class="mpct">28%</div></div>
+              <div class="mrow"><div class="mlbl">RAM</div><div class="mbar"><div class="mfill mf-hi" style="width:88%"></div></div><div class="mpct" style="color:var(--danger)">88%</div></div>
+            </div>
+          </div>
+
+          <div class="srv-row" onclick="selSrv(this)">
+            <div class="srv-av av-proxy">PX</div>
+            <div class="srv-info">
+              <div class="srv-name"><div class="sdot sdot-g"></div>prod-nginx-01<span class="rpill rp-proxy">proxy</span></div>
+              <div class="srv-meta">10.0.1.5 · Nginx 1.25 · sg-ap</div>
+            </div>
+            <div class="mbars">
+              <div class="mrow"><div class="mlbl">CPU</div><div class="mbar"><div class="mfill mf-lo" style="width:18%"></div></div><div class="mpct">18%</div></div>
+              <div class="mrow"><div class="mlbl">RAM</div><div class="mbar"><div class="mfill mf-lo" style="width:35%"></div></div><div class="mpct">35%</div></div>
+            </div>
+          </div>
+
+          <div class="srv-row" onclick="selSrv(this)">
+            <div class="srv-av av-web">WB</div>
+            <div class="srv-info">
+              <div class="srv-name"><div class="sdot sdot-g"></div>stg-web-01<span class="rpill rp-web">web</span></div>
+              <div class="srv-meta">10.0.2.10 · Ubuntu 22.04 · sg-ap</div>
+            </div>
+            <div class="mbars">
+              <div class="mrow"><div class="mlbl">CPU</div><div class="mbar"><div class="mfill mf-lo" style="width:12%"></div></div><div class="mpct">12%</div></div>
+              <div class="mrow"><div class="mlbl">RAM</div><div class="mbar"><div class="mfill mf-lo" style="width:44%"></div></div><div class="mpct">44%</div></div>
+            </div>
+          </div>
+
+          <div class="srv-row" onclick="selSrv(this)">
+            <div class="srv-av av-db">DB</div>
+            <div class="srv-info">
+              <div class="srv-name"><div class="sdot sdot-x"></div>dev-db-01<span class="rpill rp-db">database</span></div>
+              <div class="srv-meta">10.0.3.20 · PostgreSQL 16 · sg-ap</div>
+            </div>
+            <div class="mbars">
+              <div class="mrow"><div class="mlbl">CPU</div><div class="mbar"><div class="mfill mf-lo" style="width:0%"></div></div><div class="mpct">—</div></div>
+              <div class="mrow"><div class="mlbl">RAM</div><div class="mbar"><div class="mfill mf-lo" style="width:0%"></div></div><div class="mpct">—</div></div>
+            </div>
+          </div>
+
+          <div class="add-row" onclick="openModal()">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
+            Add new server
+          </div>
+        </div>
+
+        <!-- Right: detail -->
+        <div class="panel" style="display:flex;flex-direction:column;overflow:hidden">
+          <div class="det-hdr">
+            <div class="det-name"><div class="sdot sdot-g"></div>prod-web-01<span class="rpill rp-web">web</span></div>
+            <div class="det-meta">10.0.1.10 · 4 vCPU · 8 GB · sg-ap-southeast-1</div>
+            <div class="det-row">
+              <span class="upbadge">
+                <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10,10"/></svg>
+                42d 17h
+              </span>
+              <span class="tag">Ubuntu 22.04</span>
+              <span class="tag">KVM</span>
+            </div>
+            <div class="det-btns">
+              <button class="btn btn-ghost" style="font-size:10px;padding:3px 9px">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="4" width="14" height="9" rx="2"/><path d="M4 9l2-1.5L4 6"/><line x1="8" y1="9" x2="12" y2="9"/></svg>
+                SSH
+              </button>
+              <button class="btn btn-ghost" style="font-size:10px;padding:3px 9px">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 8A5 5 0 1 1 3.05 5.5"/><path d="M13 1v4h-4"/></svg>
+                Restart
+              </button>
+              <button class="btn btn-danger" style="font-size:10px;padding:3px 9px">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="6" y1="2" x2="6" y2="14"/><line x1="10" y1="2" x2="10" y2="14"/></svg>
+                Stop
+              </button>
+            </div>
+          </div>
+
+          <div class="dtabs">
+            <div class="dtab active" onclick="switchTab(this,'res')">Resources</div>
+            <div class="dtab" onclick="switchTab(this,'procs')">Processes</div>
+            <div class="dtab" onclick="switchTab(this,'net')">Network</div>
+            <div class="dtab" onclick="switchTab(this,'logs')">Logs</div>
+          </div>
+
+          <div style="flex:1;overflow-y:auto">
+
+            <!-- Resources -->
+            <div id="tab-res">
+              <div class="res-grid">
+                <div class="rc">
+                  <div class="rc-top"><div class="rc-lbl">CPU</div><div class="rc-val" style="color:var(--warn)" id="cpu-val">72%</div></div>
+                  <div class="rc-bar"><div class="rc-fill mf-md" id="cpu-bar" style="width:72%"></div></div>
+                  <div class="rc-sub">4 cores · load 2.1</div>
+                </div>
+                <div class="rc">
+                  <div class="rc-top"><div class="rc-lbl">Memory</div><div class="rc-val" style="color:var(--warn)" id="ram-val">61%</div></div>
+                  <div class="rc-bar"><div class="rc-fill mf-md" id="ram-bar" style="width:61%"></div></div>
+                  <div class="rc-sub">4.9 / 8.0 GB</div>
+                </div>
+                <div class="rc">
+                  <div class="rc-top"><div class="rc-lbl">Disk</div><div class="rc-val" style="color:var(--accent)">48%</div></div>
+                  <div class="rc-bar"><div class="rc-fill mf-lo" style="width:48%"></div></div>
+                  <div class="rc-sub">96 / 200 GB SSD</div>
+                </div>
+                <div class="rc">
+                  <div class="rc-top"><div class="rc-lbl">Swap</div><div class="rc-val" style="color:var(--accent)">12%</div></div>
+                  <div class="rc-bar"><div class="rc-fill mf-lo" style="width:12%"></div></div>
+                  <div class="rc-sub">0.2 / 2.0 GB</div>
+                </div>
+              </div>
+
+              <div class="spark-wrap" style="padding:0 12px 8px">
+                <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">CPU 1h</div>
+                <svg viewBox="0 0 300 32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:32px">
+                  <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".25"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+                  <path d="M0,28 L20,26 L40,22 L60,24 L80,18 L100,16 L120,20 L140,12 L160,10 L180,14 L200,9 L220,13 L240,7 L260,9 L280,6 L300,5" fill="url(#cg)" stroke="none"/>
+                  <path d="M0,28 L20,26 L40,22 L60,24 L80,18 L100,16 L120,20 L140,12 L160,10 L180,14 L200,9 L220,13 L240,7 L260,9 L280,6 L300,5" fill="none" stroke="var(--accent)" stroke-width="1.2"/>
+                </svg>
+              </div>
+
+              <div class="io-row">
+                <div class="io-item">
+                  <div class="io-lbl">Disk Read</div>
+                  <div class="io-val" style="color:var(--accent2)">24.3<span style="font-size:10px;color:var(--text3)"> MB/s</span></div>
+                </div>
+                <div class="io-item">
+                  <div class="io-lbl">Disk Write</div>
+                  <div class="io-val" style="color:var(--purple)">8.1<span style="font-size:10px;color:var(--text3)"> MB/s</span></div>
+                </div>
+                <div class="io-item">
+                  <div class="io-lbl">IOPS</div>
+                  <div class="io-val">1,240</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Processes -->
+            <div id="tab-procs" style="display:none">
+              <div class="proc-list">
+                <div class="proc-hdr">
+                  <div class="pc-name">NAME</div><div class="pc-pid">PID</div><div class="pc-cpu">CPU</div><div class="pc-mem">MEM</div>
+                </div>
+                <div class="proc-row-item"><div class="pc-name">dotnet HRDesk.API.dll</div><div class="pc-pid">3124</div><div class="pc-cpu" style="color:var(--warn)">31.2%</div><div class="pc-mem">1.8G</div></div>
+                <div class="proc-row-item"><div class="pc-name">nginx: worker process</div><div class="pc-pid">1201</div><div class="pc-cpu" style="color:var(--accent)">8.4%</div><div class="pc-mem">124M</div></div>
+                <div class="proc-row-item"><div class="pc-name">node /var/www/uphr/server.js</div><div class="pc-pid">4560</div><div class="pc-cpu" style="color:var(--accent)">7.1%</div><div class="pc-mem">280M</div></div>
+                <div class="proc-row-item"><div class="pc-name">postgres: autovacuum</div><div class="pc-pid">2890</div><div class="pc-cpu" style="color:var(--accent)">4.3%</div><div class="pc-mem">88M</div></div>
+                <div class="proc-row-item"><div class="pc-name">redis-server 127.0.0.1:6379</div><div class="pc-pid">1088</div><div class="pc-cpu">1.2%</div><div class="pc-mem">512M</div></div>
+                <div class="proc-row-item"><div class="pc-name">systemd-journald</div><div class="pc-pid">499</div><div class="pc-cpu">0.4%</div><div class="pc-mem">32M</div></div>
+                <div class="proc-row-item"><div class="pc-name">sshd: ubuntu@pts/0</div><div class="pc-pid">8812</div><div class="pc-cpu">0.1%</div><div class="pc-mem">12M</div></div>
+              </div>
+            </div>
+
+            <!-- Network -->
+            <div id="tab-net" style="display:none">
+              <div style="padding:8px 12px 4px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)">Interfaces</div>
+              <div class="net-row"><div class="net-if">eth0</div><div class="net-tx">↑ 12.4 MB/s</div><div class="net-rx">↓ 3.1 MB/s</div></div>
+              <div class="net-row"><div class="net-if">eth0</div><div class="net-tx" style="color:var(--text3)">TX 1.2 TB total</div><div class="net-rx">RX 340 GB total</div></div>
+              <div class="net-row"><div class="net-if">lo</div><div class="net-tx">↑ 0.3 MB/s</div><div class="net-rx">↓ 0.3 MB/s</div></div>
+              <div style="padding:8px 12px 4px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);border-top:1px solid var(--border);margin-top:4px">Open Ports</div>
+              <div class="port-row"><div class="port-name">nginx http</div><div class="port-num">:80</div><div class="port-conn">1,204</div></div>
+              <div class="port-row"><div class="port-name">nginx https</div><div class="port-num">:443</div><div class="port-conn">3,817</div></div>
+              <div class="port-row"><div class="port-name">dotnet api</div><div class="port-num">:5000</div><div class="port-conn">88</div></div>
+              <div class="port-row"><div class="port-name">sshd</div><div class="port-num" style="color:var(--purple)">:22</div><div class="port-conn">2</div></div>
+            </div>
+
+            <!-- Logs -->
+            <div id="tab-logs" style="display:none">
+              <div class="log-pane">
+                <div class="ll"><span class="lts">14:32:01</span><span class="lok">[nginx]  200 GET /api/health — 2ms</span></div>
+                <div class="ll"><span class="lts">14:32:04</span><span>[dotnet] Request /api/v1/attendance/punch — 200 OK</span></div>
+                <div class="ll"><span class="lts">14:32:08</span><span class="lw">[redis]  Slow log: HGETALL took 142ms</span></div>
+                <div class="ll"><span class="lts">14:32:10</span><span class="ler">[dotnet] Error: Connection pool timeout after 30s</span></div>
+                <div class="ll"><span class="lts">14:32:11</span><span>[dotnet] Retrying connection pool (attempt 1/3)…</span></div>
+                <div class="ll"><span class="lts">14:32:12</span><span class="lok">[dotnet] Connection pool restored</span></div>
+                <div class="ll"><span class="lts">14:32:15</span><span class="lcmd">[system] systemd: Started dotnet-api.service</span></div>
+                <div class="ll"><span class="lts">14:32:18</span><span>[nginx]  200 POST /api/v1/leave/request — 18ms</span></div>
+                <div class="ll"><span class="lts">14:32:22</span><span>[nginx]  304 GET /app/static/main.js — 1ms</span></div>
+                <div class="ll"><span class="lts">14:32:30</span><span class="lw">[system] CPU usage exceeded 70% threshold</span></div>
+                <div class="ll"><span class="lts">14:32:33</span><span>[dotnet] EF migration check: up to date<span class="lcur"></span></span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div><!-- /grid-main -->
+
+      <!-- Bottom -->
+      <div class="grid-bot">
+        <!-- Alerts -->
+        <div class="panel">
+          <div class="ph">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--danger)" stroke-width="1.8"><path d="M8 1a5 5 0 0 1 5 5v3l1.5 2H1.5L3 9V6a5 5 0 0 1 5-5z"/><path d="M6.5 13.5a1.5 1.5 0 0 0 3 0"/></svg>
+            <span class="ph-title">Active Alerts</span>
+            <div class="ph-acts"><button class="btn btn-ghost" style="font-size:10px;padding:3px 9px">Silence all</button></div>
+          </div>
+          <div class="alert-row"><div class="adot sdot-r pulse-anim"></div><div class="abody"><div class="atitle">prod-cache-01 — CPU critical (91%)</div><div class="ameta">redis-server · thresh 85%</div></div><div class="atime">4m</div></div>
+          <div class="alert-row"><div class="adot sdot-r pulse-anim"></div><div class="abody"><div class="atitle">prod-db-01 — RAM critical (88%)</div><div class="ameta">PostgreSQL · thresh 80%</div></div><div class="atime">12m</div></div>
+          <div class="alert-row"><div class="adot sdot-y"></div><div class="abody"><div class="atitle">prod-web-01 — CPU warning (72%)</div><div class="ameta">dotnet + nginx · sustained 5m</div></div><div class="atime">18m</div></div>
+          <div class="alert-row"><div class="adot sdot-y"></div><div class="abody"><div class="atitle">prod-worker-01 — latency high</div><div class="ameta">p95: 820ms · baseline 200ms</div></div><div class="atime">34m</div></div>
+          <div class="alert-row"><div class="adot" style="background:var(--accent2)"></div><div class="abody"><div class="atitle">SSL expires in 14 days</div><div class="ameta">api.hrdesk.io · Let's Encrypt</div></div><div class="atime">2h</div></div>
+        </div>
+
+        <!-- Audit log -->
+        <div class="panel">
+          <div class="ph">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--accent2)" stroke-width="1.8"><rect x="2" y="1" width="12" height="14" rx="2"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/></svg>
+            <span class="ph-title">Audit Log</span>
+            <span class="ph-sub">today</span>
+          </div>
+          <div class="alert-row"><div class="adot" style="background:var(--purple)"></div><div class="abody"><div class="atitle">SSH login — ubuntu@prod-web-01</div><div class="ameta">103.214.xx.xx · key: deploy_rsa</div></div><div class="atime">14:28</div></div>
+          <div class="alert-row"><div class="adot" style="background:var(--accent)"></div><div class="abody"><div class="atitle">Service restarted — dotnet-api.service</div><div class="ameta">prod-web-01 · deploy script</div></div><div class="atime">14:25</div></div>
+          <div class="alert-row"><div class="adot" style="background:var(--accent2)"></div><div class="abody"><div class="atitle">Firewall rule — port 5432 blocked</div><div class="ameta">prod-db-01 · by: admin</div></div><div class="atime">13:50</div></div>
+          <div class="alert-row"><div class="adot" style="background:var(--warn)"></div><div class="abody"><div class="atitle">Cron added — db-backup.sh</div><div class="ameta">prod-db-01 · daily 02:00</div></div><div class="atime">11:12</div></div>
+          <div class="alert-row"><div class="adot sdot-r"></div><div class="abody"><div class="atitle">Server stopped — dev-db-01</div><div class="ameta">by: devteam · graceful shutdown</div></div><div class="atime">09:40</div></div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- Modal -->
+<div class="modal-ov" id="addModal">
+  <div class="modal">
+    <div class="m-hdr">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.8"><rect x="1" y="2" width="14" height="4" rx="1"/><rect x="1" y="9" width="14" height="4" rx="1"/></svg>
+      <div class="m-title">Add New Server</div>
+      <button class="m-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="m-body">
+      <div class="frow">
+        <div class="fg"><label class="flbl">Hostname</label><input class="finp" type="text" placeholder="prod-web-02"></div>
+        <div class="fg"><label class="flbl">IP Address</label><input class="finp" type="text" placeholder="10.0.1.11"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="flbl">Role</label><select class="fsel"><option>web</option><option>database</option><option>proxy</option><option>worker</option><option>cache</option></select></div>
+        <div class="fg"><label class="flbl">Region</label><select class="fsel"><option>sg-ap-southeast-1</option><option>us-east-1</option><option>eu-west-1</option></select></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="flbl">SSH Key</label><select class="fsel"><option>deploy_rsa</option><option>admin_ed25519</option><option>ci_deploy_key</option></select></div>
+        <div class="fg"><label class="flbl">SSH Port</label><input class="finp" type="text" value="22"></div>
+      </div>
+      <div class="fg"><label class="flbl">Tags</label><input class="finp" type="text" placeholder="production, ubuntu-22, kvm"><div class="fhint" style="margin-top:3px">Comma-separated</div></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary">Connect Server</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme(){const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'}
+function selSrv(el){document.querySelectorAll('.srv-row').forEach(r=>r.classList.remove('sel'));el.classList.add('sel')}
+function switchTab(el,id){document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.querySelectorAll('[id^="tab-"]').forEach(t=>t.style.display='none');const t=document.getElementById('tab-'+id);if(t)t.style.display='block'}
+function openModal(){document.getElementById('addModal').classList.add('open')}
+function closeModal(){document.getElementById('addModal').classList.remove('open')}
+document.getElementById('addModal').addEventListener('click',function(e){if(e.target===this)closeModal()})
+
+// Live resource tick
+setInterval(()=>{
+  ['cpu','ram'].forEach(k=>{
+    const bar=document.getElementById(k+'-bar');
+    const val=document.getElementById(k+'-val');
+    if(!bar||!val)return;
+    const cur=parseInt(bar.style.width);
+    const nw=Math.min(98,Math.max(5,cur+(Math.random()-.46)*5));
+    bar.style.width=nw+'%';
+    val.textContent=Math.round(nw)+'%';
+    val.style.color=nw>80?'var(--danger)':nw>60?'var(--warn)':'var(--accent)';
+    bar.className='rc-fill '+(nw>80?'mf-hi':nw>55?'mf-md':'mf-lo');
+  });
+},2200);
+</script>
+</body>
+</html>

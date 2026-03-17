@@ -1,11 +1,32 @@
 <template>
   <NuxtLayout>
-    <NuxtPage />
+    <div v-if="loading" class="app-loader">
+      <div class="loader-content">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">Restoring session...</div>
+      </div>
+    </div>
+    <NuxtPage v-else />
   </NuxtLayout>
 </template>
 
+<script setup>
+const auth = useAuth()
+const loading = ref(true)
+
+onMounted(async () => {
+  if (import.meta.client) {
+    const hasToken = localStorage.getItem('cekok_refresh')
+    if (hasToken) {
+      await auth.refresh()
+    }
+    loading.value = false
+  }
+})
+</script>
+
 <style>
-/* ── Reset & Typography ── */
+/* ── Compact Reset & Typography ── */
 :root {
   --bg0: #0d0f14;
   --bg1: #13161e;
@@ -22,12 +43,12 @@
   --danger: #f05060;
   --success: #00c9a7;
   --purple: #8b7fff;
-  --radius: 10px;
-  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-sm: 5px;
   --font: 'Sora', sans-serif;
   --mono: 'JetBrains Mono', monospace;
-  --sidebar: 220px;
-  --transition: 0.2s ease;
+  --sidebar: 240px;
+  --transition: 0.15s ease;
 }
 
 [data-theme="light"] {
@@ -50,22 +71,22 @@ html, body {
   font-family: var(--font);
   background: var(--bg0);
   color: var(--text1);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.4;
   transition: background var(--transition), color var(--transition);
 }
 #__nuxt { height: 100%; }
 
-/* Scrollbar */
-::-webkit-scrollbar { width:5px; height:5px; }
+/* Compact Scrollbar */
+::-webkit-scrollbar { width:4px; height:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
 
 /* Global Utilities */
 .btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border-radius: var(--radius-sm);
-  font-size: 12px; font-weight: 500; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 11px; border-radius: var(--radius-sm);
+  font-size: 11px; font-weight: 500; cursor: pointer;
   border: none; font-family: var(--font); transition: all var(--transition);
 }
 .btn-primary { background: var(--accent); color: #0d1814; }
@@ -75,5 +96,27 @@ html, body {
 .btn-ghost:hover { color: var(--text1); background: var(--bg2); }
 .btn-danger { background: rgba(240,80,96,0.15); color: var(--danger); border: 1px solid rgba(240,80,96,0.25); }
 .btn-danger:hover { background: rgba(240,80,96,0.25); }
+
+/* App Loader */
+.app-loader {
+  position: fixed; inset: 0; background: var(--bg0);
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
+.loader-content { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.loader-spinner {
+  width: 28px; height: 28px; border: 2px solid var(--bg3);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loader-text { font-size: 12px; color: var(--text2); font-weight: 500; letter-spacing: 0.5px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Transitions */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.slide-enter-active, .slide-leave-active { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+.slide-enter-from, .slide-leave-to { transform: translateX(100%); }
 
 </style>
