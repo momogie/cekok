@@ -20,8 +20,14 @@ public static class SystemAppsController
         group.MapPost("/{serverId}/install/{appId}", [Authorize(Roles = "admin")] async (
             string serverId, string appId, SystemAppService svc, CancellationToken ct) =>
         {
-            await svc.InstallAsync(serverId, appId, ct);
-            return Results.Ok(new { message = $"{appId} installation triggered" });
+            var res = await svc.InstallAsync(serverId, appId, ct);
+            return Results.Ok(new { 
+                success = res.ExitStatus == 0,
+                message = res.ExitStatus == 0 ? $"{appId} installed successfully" : $"{appId} installation failed",
+                output = res.Output,
+                error = res.Error,
+                exitStatus = res.ExitStatus
+            });
         });
 
         return group;

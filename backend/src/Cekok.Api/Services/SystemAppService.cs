@@ -44,7 +44,7 @@ public class SystemAppService(CekokDbContext db, SshService sshSvc, EncryptionSe
         return statuses;
     }
 
-    public async Task InstallAsync(string serverId, string appId, CancellationToken ct)
+    public async Task<(string Output, string Error, int ExitStatus)> InstallAsync(string serverId, string appId, CancellationToken ct)
     {
         var server = await db.Servers.FindAsync([serverId], ct)
             ?? throw new KeyNotFoundException("Server not found");
@@ -58,12 +58,14 @@ public class SystemAppService(CekokDbContext db, SshService sshSvc, EncryptionSe
             _ => throw new ArgumentException("Invalid App ID")
         };
 
-        await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, pw, command, ct);
+        var result = await sshSvc.RunCommandDetailedAsync(server.Ip, server.SshPort, server.SshUser, pw, command, ct);
 
-        if (appId.ToLower() == "nginx")
+        if (result.ExitStatus == 0 && appId.ToLower() == "nginx")
         {
             server.NginxInstalled = true;
             await db.SaveChangesAsync(ct);
         }
+
+        return result;
     }
 }
