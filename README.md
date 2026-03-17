@@ -11,6 +11,7 @@ Cekok adalah aplikasi **CI/CD ringan berbasis web** yang di-host sendiri di atas
 **Stack:**
 - Backend — .NET 10 ASP.NET Core (Minimal API)
 - Frontend — Nuxt 3 (Vue 3 + Vite)
+- UI/UX — Vanilla CSS with Modern Aesthetics (Glassmorphism, Dark Mode)
 - Database — SQLite via EF Core Code First
 - Job Queue — Hangfire
 - SSH/SCP — SSH.NET library
@@ -62,6 +63,7 @@ cekok/
 │           │   ├── ApplicationsController.cs
 │           │   ├── DeployController.cs
 │           │   ├── NginxController.cs
+│           │   ├── SystemAppsController.cs    ← manage Nginx, Redis, .NET SDK
 │           │   └── ScheduleController.cs
 │           │
 │           ├── Services/
@@ -73,6 +75,7 @@ cekok/
 │           │   ├── BuildService.cs
 │           │   ├── NginxService.cs
 │           │   ├── EncryptionService.cs
+│           │   ├── SystemAppService.cs        ← install system dependency
 │           │   └── HealthCheckService.cs
 │           │
 │           ├── Middleware/
@@ -119,7 +122,10 @@ cekok/
     ├── components/
     │   ├── AppList.vue
     │   ├── AppDetailPanel.vue
-    │   ├── ServerCard.vue
+    │   ├── ServerItem.vue             ← compact server list item
+    │   ├── ServerDetailPanel.vue      ← tabbed monitoring & management
+    │   ├── ServerNetworkTab.vue       ← network & firewall details
+    │   ├── ServerTerminal.vue         ← interactive terminal
     │   ├── DeployLog.vue
     │   ├── CronEditor.vue
     │   ├── AddAppModal.vue
@@ -203,6 +209,7 @@ servers (
   ssh_user      TEXT NOT NULL,
   ssh_password_enc TEXT NOT NULL,   -- AES-256-GCM encrypted
   role          TEXT NOT NULL,      -- master | app-server | proxy | db-server
+  hostname      TEXT,
   tags          TEXT,               -- JSON array
   nginx_installed INTEGER DEFAULT 0,
   created_at    TEXT NOT NULL
@@ -449,8 +456,15 @@ Setiap deploy job menjalankan langkah berikut secara berurutan:
 |--------|----------|-----------|
 | GET | `/api/servers` | List server (admin: semua, lainnya: hanya yg diizinkan) |
 | POST | `/api/servers` | Tambah server _(admin only)_ |
+| PUT | `/api/servers/{id}` | Update server _(admin only)_ |
 | DELETE | `/api/servers/{id}` | Hapus server _(admin only)_ |
-| POST | `/api/servers/{id}/test-connection` | Test SSH |
+| POST | `/api/servers/{id}/test-connection` | Test SSH & fetch hostname |
+| GET | `/api/servers/{id}/sys-info` | Get static info (CPU, Uptime, Hostname) |
+| GET | `/api/servers/{id}/stats` | Real-time stats (CPU%, RAM, Disk, Net Traffic) |
+| GET | `/api/servers/{id}/network` | Interface list, open ports, & firewall status |
+| GET | `/api/servers/{id}/processes` | Top 10 CPU processes |
+| POST | `/api/servers/{id}/execute` | Run command on server |
+| POST | `/api/servers/{id}/execute-stream` | Stream command output |
 
 **Applications**
 
@@ -479,6 +493,13 @@ Setiap deploy job menjalankan langkah berikut secara berurutan:
 | POST | `/api/nginx/{serverId}/install` | Install nginx _(requires can_manage)_ |
 | POST | `/api/nginx/{serverId}/reload` | Reload config _(requires can_manage)_ |
 | POST | `/api/nginx/{serverId}/deploy-config` | Upload + apply config _(requires can_manage)_ |
+
+**System Apps**
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| GET | `/api/systemapps/{serverId}/status` | Get status of Nginx, Redis, .NET SDK |
+| POST | `/api/systemapps/{serverId}/install/{appId}` | Install system app (nginx/redis/dotnet) |
 
 **Schedule & Audit**
 
@@ -683,20 +704,21 @@ systemctl start cekok
 
 ## Roadmap
 
-| Fase | Fitur |
-|------|-------|
-| v0.1 | Server registry, SSH connect test, app CRUD |
-| v0.2 | Auth — JWT login, refresh token, BCrypt password |
-| v0.3 | User management — CRUD user, role (admin/operator/viewer) |
-| v0.4 | Server access control — user_server_access, middleware enforcement |
-| v0.5 | Deploy pipeline (build + SCP + restart) untuk .NET |
-| v0.6 | Multi-target paralel deploy + per-target log stream (SSE) |
-| v0.7 | Nuxt / Vue / static build support |
-| v0.8 | Cron schedule via Hangfire |
-| v0.9 | Nginx manager (install, config template, reload) |
-| v0.10 | Rollback (auto + manual) + audit log |
-| v0.11 | Notifikasi (Slack webhook) |
-| v1.0 | Dashboard UI final + production hardening |
+| Fase | Fitur | Status |
+|------|-------|--------|
+| v0.1 | Server registry, SSH connect test, app CRUD | ✓ |
+| v0.2 | Auth — JWT login, refresh token, BCrypt password | ✓ |
+| v0.3 | User management — CRUD user, role (admin/operator/viewer) | ✓ |
+| v0.4 | Server access control — user_server_access, middleware enforcement | ✓ |
+| v0.5 | Deploy pipeline (build + SCP + restart) untuk .NET | ✓ |
+| v0.6 | Multi-target paralel deploy + per-target log stream (SSE) | ✓ |
+| v0.7 | Nuxt / Vue / static build support | ✓ |
+| v0.8 | Cron schedule via Hangfire | ✓ |
+| v0.9 | Nginx manager (install, config template, reload) | ✓ |
+| v0.10| Real-time Monitoring (CPU, RAM, Disk, Traffic) | ✓ |
+| v0.11| System Apps Manager (Nginx, Redis, .NET SDK) | ✓ |
+| v0.12| Interactive Terminal Interface | ✓ |
+| v1.0 | Dashboard UI final + production hardening | 🏃 |
 
 ---
 
