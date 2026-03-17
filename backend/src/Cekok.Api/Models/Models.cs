@@ -75,6 +75,16 @@ public class Application
     public string Branch { get; set; } = "main";
     public string? BuildCmd { get; set; }
     public string? OutputDir { get; set; }
+    /// <summary>manual | webhook | schedule | both</summary>
+    public string Trigger { get; set; } = "manual";
+    /// <summary>GitHub Personal Access Token (encrypted)</summary>
+    public string? TokenEnc { get; set; }
+    /// <summary>Environment variables as JSON array [{key,val}]</summary>
+    public string? EnvVars { get; set; }
+    // Deploy target (single-server form)
+    public string? DeployDir { get; set; }
+    public string? ServiceName { get; set; }
+    public int? Port { get; set; }
     public string? ScheduleCron { get; set; }
     public bool ScheduleEnabled { get; set; } = false;
     public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("O");

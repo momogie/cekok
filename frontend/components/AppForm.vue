@@ -319,14 +319,32 @@ const submit = async () => {
   loading.value = true
   try {
     const appsCtx = useApps()
-    // Clean up env vars
-    const data = { ...form.value }
-    data.envVars = data.envVars.filter(e => e.key.trim())
+    // Clean up env vars — remove empty rows
+    const cleanEnvVars = form.value.envVars
+      .filter(e => e.key.trim())
+      .map(e => ({ key: e.key.trim(), val: e.val }))
+
+    const payload = {
+      name: form.value.name,
+      type: form.value.type,
+      repoUrl: form.value.repoUrl,
+      branch: form.value.branch,
+      buildCmd: form.value.buildCmd || null,
+      outputDir: form.value.outputDir || null,
+      trigger: form.value.trigger,
+      token: form.value.token || null,
+      envVars: cleanEnvVars.length ? cleanEnvVars : null,
+      deployDir: form.value.deployDir || null,
+      serviceName: form.value.serviceName || null,
+      port: form.value.port ? Number(form.value.port) : null,
+      scheduleCron: form.value.scheduleCron || null,
+      scheduleEnabled: form.value.scheduleEnabled,
+    }
 
     if (props.app) {
-      await appsCtx.updateApp(props.app.id, data)
+      await appsCtx.updateApp(props.app.id, payload)
     } else {
-      await appsCtx.createApp(data)
+      await appsCtx.createApp(payload)
     }
     success.value = true
     emit('saved')
@@ -336,6 +354,7 @@ const submit = async () => {
     loading.value = false
   }
 }
+
 
 const resetForm = () => {
   success.value = false

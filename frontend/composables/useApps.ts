@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia'
 
+export interface EnvVar {
+  key: string
+  val: string
+}
+
 export interface Application {
   id: string
   name: string
@@ -8,11 +13,15 @@ export interface Application {
   branch: string
   buildCmd?: string
   outputDir?: string
+  trigger: string
+  // tokenEnc is never exposed to frontend
+  envVars?: string // JSON serialized EnvVar[]
+  deployDir?: string
+  serviceName?: string
+  port?: number
   scheduleCron?: string
   scheduleEnabled: boolean
-  lastDeployedAt?: string
-  lastStatus?: string
-  currentJobId?: string
+  createdAt: string
 }
 
 export interface DeployJob {
