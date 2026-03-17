@@ -180,11 +180,59 @@ public static class ServersController
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
+            var sudoPrefix = srv.SshUser == "root" ? "" : $"echo '{pw.Replace("'", "'\\''")}' | sudo -S ";
 
             try {
                 var ifaceRaw = await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "ip -o addr show | awk '{print $2,$4}'", ct);
                 var pingStatus = await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "cat /proc/net/dev | awk 'NR>2 {print $1,$2,$10}'", ct);
                 
+                var fwPortsStr = "";
+                var fwType = "none";
+                var fwStatus = "inactive";
+
+                // 1. Check firewalld
+                try {
+                    var fwState = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, $"{sudoPrefix}firewall-cmd --state 2>/dev/null", ct)).Trim();
+                    if (fwState == "running" || fwState == "not running")
+                    {
+                        fwType = "firewalld";
+                        fwStatus = fwState == "running" ? "active" : "inactive";
+                        if (fwStatus == "active")
+                        {
+                            var fwp = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, $"{sudoPrefix}firewall-cmd --list-ports 2>/dev/null", ct)).Trim();
+                            var fws = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, $"{sudoPrefix}firewall-cmd --list-services 2>/dev/null", ct)).Trim();
+                            fwPortsStr = (fwp + " " + fws).Trim();
+                        }
+                    }
+                } catch { }
+
+                // 2. Check UFW (priority if firewalld is inactive or missing)
+                if (fwStatus != "active")
+                {
+                    try {
+                        var ufwOutput = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, $"{sudoPrefix}ufw status 2>/dev/null", ct)).Trim();
+                        if (ufwOutput.Contains("Status:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var currentStatus = ufwOutput.Contains("active", StringComparison.OrdinalIgnoreCase) ? "active" : "inactive";
+                            // If UFW is active, we definitely prefer it over inactive firewalld
+                            if (currentStatus == "active" || fwType == "none")
+                            {
+                                fwType = "ufw";
+                                fwStatus = currentStatus;
+                                if (fwStatus == "active")
+                                {
+                                    var ufwLines = ufwOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                        .Where(l => l.Contains("ALLOW", StringComparison.OrdinalIgnoreCase))
+                                        .Select(l => l.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault())
+                                        .Where(p => !string.IsNullOrEmpty(p) && p.ToLower() != "to")
+                                        .Distinct();
+                                    fwPortsStr = string.Join(" ", ufwLines);
+                                }
+                            }
+                        }
+                    } catch { }
+                }
+
                 var trafficMap = pingStatus.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToDictionary(
                     line => line.Split(':', StringSplitOptions.RemoveEmptyEntries)[0].Trim(),
                     line => {
@@ -213,7 +261,9 @@ public static class ServersController
                     return new { Proto = parts.ElementAtOrDefault(0), Port = port, Address = fullAddr };
                 }).Distinct().OrderBy(p => int.TryParse(p.Port, out var val) ? val : 99999).ToList();
 
-                return Results.Ok(new { interfaces, ports });
+                var fwPorts = fwPortsStr.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                return Results.Ok(new { interfaces, ports, fwPorts, fwType, fwStatus });
             } catch (Exception ex) {
                 return Results.Problem(ex.Message);
             }
