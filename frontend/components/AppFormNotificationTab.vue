@@ -54,7 +54,7 @@
             class="form-input" 
             placeholder="e.g. -100123456789"
           />
-          <div class="form-hint">Leave empty to use global admin chat ID from settings</div>
+          <div class="form-hint">Type <code>/id</code> or <code>/subscribe</code> in Telegram Bot to get your ID. Separate multiple IDs with commas.</div>
         </div>
       </div>
     </div>

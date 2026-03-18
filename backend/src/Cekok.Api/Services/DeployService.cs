@@ -140,17 +140,17 @@ public class DeployService(
         {
             if (job != null && app != null)
             {
-                // [7] Notification - Send while still in 'running' state (if not already set to failed)
-                // If it's failed, it stays failed. If it's running, we'll set it at the end of this block.
-                await scopeNotify.SendDeploymentNotificationAsync(app, job, (level, msg) => Log(null, level, msg));
-
                 if (job.Status == "running")
                 {
-                    var allSuccess = targets.All(t => t.Status == "success");
+                    var allSuccess = targets.Any() && targets.All(t => t.Status == "success");
                     job.Status = allSuccess ? "success" : "failed";
                 }
                 
                 job.FinishedAt = DateTime.UtcNow.ToString("O");
+
+                // Notification - Send after status is finalized
+                await scopeNotify.SendDeploymentNotificationAsync(app, job, (level, msg) => Log(null, level, msg));
+
                 await scopeDb.SaveChangesAsync(ct);
             }
 

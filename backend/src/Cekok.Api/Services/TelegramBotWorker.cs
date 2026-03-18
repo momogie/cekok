@@ -94,7 +94,7 @@ public class TelegramBotWorker(
             
             if (cmd == "/start")
             {
-                await SendReplyAsync(token, chatId, "👋 Welcome to Cekok Bot!\n\nI can notify you about deployments.\n\nCommands:\n/subscribe - Get all deployment notifications\n/unsubscribe - Stop notifications\n/id - Show your Telegram Chat ID", ct);
+                await SendReplyAsync(token, chatId, "👋 Welcome to Cekok Bot!\n\nI can notify you about deployments for specific applications.\n\nCommands:\n/id - Show your Telegram Chat ID\n/help - Show this message", ct);
             }
             else if (cmd == "/id")
             {
@@ -120,7 +120,7 @@ public class TelegramBotWorker(
                 }
 
                 await db.SaveChangesAsync(ct);
-                await SendReplyAsync(token, chatId, "✅ You have successfully subscribed to all deployment notifications!", ct);
+                await SendReplyAsync(token, chatId, $"✅ Registered! Your Chat ID is `{chatId}`.\n\nTo receive notifications for a specific application, please copy this ID and paste it into the *Notification* tab of the application settings in your Cekok Dashboard.", ct);
                 logger.LogInformation("New telegram subscription: {ChatId} ({Username})", chatId, message.From?.Username);
             }
             else if (cmd == "/unsubscribe")
