@@ -71,6 +71,10 @@ public static class ApplicationsController
                 ScheduleCron   = dto.ScheduleCron,
                 ScheduleEnabled = dto.ScheduleEnabled,
                 EntryFile      = dto.EntryFile,
+                NotifyEmail    = dto.NotifyEmail,
+                NotifyEmailAddress = dto.NotifyEmailAddress,
+                NotifyTelegram = dto.NotifyTelegram,
+                NotifyTelegramChatId = dto.NotifyTelegramChatId,
             };
             db.Applications.Add(app);
 
@@ -147,6 +151,10 @@ public static class ApplicationsController
             if (dto.ScheduleCron    != null)    app.ScheduleCron    = dto.ScheduleCron;
             if (dto.ScheduleEnabled.HasValue)   app.ScheduleEnabled = dto.ScheduleEnabled.Value;
             if (dto.EntryFile       != null)    app.EntryFile       = dto.EntryFile;
+            if (dto.NotifyEmail.HasValue)       app.NotifyEmail     = dto.NotifyEmail.Value;
+            if (dto.NotifyEmailAddress != null) app.NotifyEmailAddress = dto.NotifyEmailAddress;
+            if (dto.NotifyTelegram.HasValue)    app.NotifyTelegram  = dto.NotifyTelegram.Value;
+            if (dto.NotifyTelegramChatId != null) app.NotifyTelegramChatId = dto.NotifyTelegramChatId;
             if (dto.EnvVars != null)
                 app.EnvVars = JsonSerializer.Serialize(dto.EnvVars);
             if (!string.IsNullOrWhiteSpace(dto.Token))
@@ -213,6 +221,17 @@ public static class ApplicationsController
             return Results.NoContent();
         });
 
+        // POST /api/applications/{id}/notify-test
+        group.MapPost("/{id}/notify-test", [Authorize(Roles = "admin,operator")] async (
+            string id, string type, CekokDbContext db, NotificationService notify, CancellationToken ct) =>
+        {
+            var app = await db.Applications.FindAsync([id], ct);
+            if (app is null) return Results.NotFound();
+
+            await notify.SendTestNotificationAsync(app, type);
+            return Results.Ok(new { message = $"Test {type} notification sent" });
+        });
+
         return group;
     }
 
@@ -242,7 +261,11 @@ public static class ApplicationsController
         string? ServerId,
         string? ScheduleCron,
         bool ScheduleEnabled,
-        string? EntryFile
+        string? EntryFile,
+        bool NotifyEmail,
+        string? NotifyEmailAddress,
+        bool NotifyTelegram,
+        string? NotifyTelegramChatId
     );
 
     public record UpdateAppDto(
@@ -259,7 +282,11 @@ public static class ApplicationsController
         List<DeployTargetDto>? DeployTargets,
         string? ScheduleCron,
         bool? ScheduleEnabled,
-        string? EntryFile
+        string? EntryFile,
+        bool? NotifyEmail,
+        string? NotifyEmailAddress,
+        bool? NotifyTelegram,
+        string? NotifyTelegramChatId
     );
 
     public record EnvVarDto(string Key, string Val);

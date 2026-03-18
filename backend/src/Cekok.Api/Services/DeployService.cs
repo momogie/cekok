@@ -56,6 +56,7 @@ public class DeployService(
         var scopeScp = sp.GetRequiredService<ScpService>();
         var scopeHealth = sp.GetRequiredService<HealthCheckService>();
         var scopeEnc = sp.GetRequiredService<EncryptionService>();
+        var scopeNotify = sp.GetRequiredService<NotificationService>();
         
         var job = await scopeDb.DeployJobs.FindAsync([jobId], ct);
         var app = await scopeDb.Applications.FindAsync([appId], ct);
@@ -144,6 +145,9 @@ public class DeployService(
             {
                 job.FinishedAt = DateTime.UtcNow.ToString("O");
                 await scopeDb.SaveChangesAsync(ct);
+
+                // [7] Notification
+                _ = scopeNotify.SendDeploymentNotificationAsync(app, job);
             }
 
             // [6] Cleanup

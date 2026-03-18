@@ -27,7 +27,26 @@
       </div>
       <div class="review-row"><span class="review-key">Deploy dir</span><span class="review-val">{{ t.deployDir || '—' }}</span></div>
       <div class="review-row"><span class="review-key">Service</span><span class="review-val">{{ t.serviceName || '—' }}</span></div>
-      <div class="review-row" v-if="t.port"><span class="review-key">Port</span><span class="review-val">{{ t.port }}</span></div>
+    </div>
+
+    <div class="review-section-title">Notification</div>
+    <div class="review-block">
+      <div class="review-row">
+        <span class="review-key">Email</span>
+        <span class="review-val" :class="{ accent: form.notifyEmail }">{{ form.notifyEmail ? 'Enabled' : 'Disabled' }}</span>
+      </div>
+      <div v-if="form.notifyEmail" class="review-row">
+        <span class="review-key">Recipient</span>
+        <span class="review-val">{{ form.notifyEmailAddress }}</span>
+      </div>
+      <div class="review-row">
+        <span class="review-key">Telegram</span>
+        <span class="review-val" :class="{ accent: form.notifyTelegram }">{{ form.notifyTelegram ? 'Enabled' : 'Disabled' }}</span>
+      </div>
+      <div v-if="form.notifyTelegram && form.notifyTelegramChatId" class="review-row">
+        <span class="review-key">Chat ID</span>
+        <span class="review-val">{{ form.notifyTelegramChatId }}</span>
+      </div>
     </div>
   </div>
 </template>

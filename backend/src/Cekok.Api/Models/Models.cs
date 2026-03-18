@@ -88,6 +88,10 @@ public class Application
     public string? ScheduleCron { get; set; }
     public bool ScheduleEnabled { get; set; } = false;
     public string? EntryFile { get; set; }
+    public bool NotifyEmail { get; set; } = false;
+    public string? NotifyEmailAddress { get; set; }
+    public bool NotifyTelegram { get; set; } = false;
+    public string? NotifyTelegramChatId { get; set; }
     public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("O");
 
     [NotMapped]

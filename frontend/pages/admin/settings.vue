@@ -12,8 +12,40 @@
       </div>
     </div>
 
+    <div class="tabs">
+      <div 
+        class="tab-item" 
+        :class="{ active: activeTab === 'general' }"
+        @click="activeTab = 'general'"
+      >
+        General
+      </div>
+      <div 
+        class="tab-item" 
+        :class="{ active: activeTab === 'notification' }"
+        @click="activeTab = 'notification'"
+      >
+        Notification
+      </div>
+    </div>
+
     <div class="content scroll-area">
-      <div class="settings-grid">
+      <div v-if="activeTab === 'general'" class="settings-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM8 4v4m0 4h.01" /></svg>
+            <span class="panel-title">System Info</span>
+          </div>
+          <div class="panel-body">
+            <div class="form-group">
+              <label>App Version</label>
+              <input value="v1.0.0-stable" disabled />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'notification'" class="settings-grid">
         <!-- SMTP Settings -->
         <div class="panel">
           <div class="panel-header">
@@ -89,6 +121,7 @@ definePageMeta({ middleware: 'auth' })
 const auth = useAuth()
 const config = useRuntimeConfig()
 const saving = ref(false)
+const activeTab = ref('notification')
 
 const form = ref({
   smtp_host: '',
@@ -155,6 +188,18 @@ const saveSettings = async () => {
 .topbar-title { font-size: 13px; font-weight: 600; }
 .topbar-sub { font-size: 11px; color: var(--text3); }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.tabs {
+  display: flex; gap: 12px; padding: 0 20px;
+  background: var(--bg1); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tab-item {
+  padding: 12px 10px; font-size: 12px; font-weight: 500; color: var(--text3);
+  cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+}
+.tab-item:hover { color: var(--text1); }
+.tab-item.active { color: var(--accent); border-bottom-color: var(--accent); }
 
 .content { flex: 1; padding: 24px; display: flex; flex-direction: column; min-height: 0; }
 .scroll-area { overflow-y: auto; scrollbar-width: thin; }

@@ -57,6 +57,7 @@ builder.Services.AddScoped<NginxService>();
 builder.Services.AddScoped<SystemAppService>();
 builder.Services.AddScoped<EncryptionService>();
 builder.Services.AddScoped<HealthCheckService>();
+builder.Services.AddScoped<NotificationService>();
 
 builder.Services.AddHttpClient();
 

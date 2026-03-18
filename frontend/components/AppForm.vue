@@ -63,8 +63,11 @@
           <!-- Step 5: Schedule -->
           <AppFormScheduleTab v-if="currentStep === 5" :form="form" :cron-presets="CRON_PRESETS" />
 
-          <!-- Step 6: Review -->
-          <AppFormReviewTab v-if="currentStep === 6" :form="form" :current-type="currentType" :server-name="serverName" />
+          <!-- Step 6: Notification -->
+          <AppFormNotificationTab v-if="currentStep === 6" :form="form" />
+
+          <!-- Step 7: Review -->
+          <AppFormReviewTab v-if="currentStep === 7" :form="form" :current-type="currentType" :server-name="serverName" />
         </template>
       </div>
 
@@ -92,7 +95,7 @@ const emit = defineEmits(['close', 'saved'])
 const loading = ref(false)
 const success = ref(false)
 const currentStep = ref(1)
-const totalSteps = 6
+const totalSteps = 7
 
 // Overlay interactions to prevent closing when dragging selection out
 const onOverlayDown = ref(false)
@@ -118,7 +121,7 @@ const CRON_PRESETS = [
   {label:'Hourly',      val:'0 * * * *'},
 ]
 
-const stepLabels = ['App Type', 'Repository', 'Build', 'Settings', 'Schedule', 'Review']
+const stepLabels = ['App Type', 'Repository', 'Build', 'Settings', 'Schedule', 'Notification', 'Review']
 
 // Helper to parse environment variables from JSON or Array
 const parseEnvVars = (raw) => {
@@ -145,6 +148,10 @@ const form = ref({
   settingFiles: [],
   scheduleEnabled: props.app?.scheduleEnabled || false,
   scheduleCron: props.app?.scheduleCron || '0 2 * * *',
+  notifyEmail: props.app?.notifyEmail || false,
+  notifyEmailAddress: props.app?.notifyEmailAddress || '',
+  notifyTelegram: props.app?.notifyTelegram || false,
+  notifyTelegramChatId: props.app?.notifyTelegramChatId || '',
   deployTargets: props.app?.deployTargets ? JSON.parse(JSON.stringify(props.app.deployTargets)) : [],
 })
 
@@ -264,6 +271,10 @@ const submit = async () => {
       settingFiles: cleanSettingFiles.length ? cleanSettingFiles : null,
       scheduleCron: form.value.scheduleCron || null,
       scheduleEnabled: form.value.scheduleEnabled,
+      notifyEmail: form.value.notifyEmail,
+      notifyEmailAddress: form.value.notifyEmailAddress || null,
+      notifyTelegram: form.value.notifyTelegram,
+      notifyTelegramChatId: form.value.notifyTelegramChatId || null,
       deployTargets: deployTargets.length ? deployTargets : null,
     }
 
@@ -299,6 +310,10 @@ const resetForm = () => {
     settingFiles: [],
     scheduleEnabled: false,
     scheduleCron: '0 2 * * *',
+    notifyEmail: false,
+    notifyEmailAddress: '',
+    notifyTelegram: false,
+    notifyTelegramChatId: '',
     deployTargets: [],
   }
 }
