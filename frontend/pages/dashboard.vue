@@ -50,14 +50,65 @@
           <div v-if="!apps.length" style="padding: 20px; color: var(--text3); font-size: 13px; grid-column: 1/-1; text-align: center;">No applications found.</div>
         </div>
       </div>
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Local Environment</div>
-          <div style="margin-left:auto;">
-            <button class="btn btn-secondary" @click="loadEnvChecks" style="padding: 4px 10px; font-size: 11px;">Refresh Checks</button>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">System Resources</div>
+            <div style="margin-left:auto;">
+              <button class="btn btn-secondary" @click="loadSysChecks" style="padding: 4px 10px; font-size: 11px;">Refresh Checks</button>
+            </div>
+          </div>
+          <div style="padding: 16px;">
+            <div v-if="sysLoading" style="color:var(--text3); font-size: 13px;">Loading system resources...</div>
+            <div v-else-if="sysError" style="color:var(--danger); font-size: 13px;">Failed to load system checks.</div>
+            <div v-else class="env-grid">
+              <div class="env-card">
+                <div class="env-card-top">
+                  <div class="env-name">CPU Usage</div>
+                  <div class="env-status" :class="(sysData?.cpuUsage || 0) > 80 ? 'danger' : 'success'">
+                    {{ sysData?.cpuUsage || 0 }}%
+                  </div>
+                </div>
+                <div class="env-version">System CPU Load</div>
+                <div class="progress-bar-bg mt-1">
+                  <div class="progress-bar-fill" :style="{ width: `${Math.min(sysData?.cpuUsage || 0, 100)}%`, backgroundColor: (sysData?.cpuUsage || 0) > 80 ? 'var(--danger)' : 'var(--success)' }"></div>
+                </div>
+              </div>
+
+              <div class="env-card">
+                <div class="env-card-top">
+                  <div class="env-name">RAM Usage</div>
+                  <div class="env-status" :class="((sysData?.ramUsed || 0) / (sysData?.ramTotal || 1)) > 0.8 ? 'danger' : 'success'">
+                    {{ sysData?.ramUsed || 0 }} GB
+                  </div>
+                </div>
+                <div class="env-version">of {{ sysData?.ramTotal || 0 }} GB Total</div>
+                <div class="progress-bar-bg mt-1">
+                  <div class="progress-bar-fill" :style="{ width: `${Math.min(((sysData?.ramUsed || 0) / (sysData?.ramTotal || 1)) * 100, 100)}%`, backgroundColor: ((sysData?.ramUsed || 0) / (sysData?.ramTotal || 1)) > 0.8 ? 'var(--danger)' : 'var(--success)' }"></div>
+                </div>
+              </div>
+
+              <div class="env-card">
+                <div class="env-card-top">
+                  <div class="env-name">Disk Usage</div>
+                  <div class="env-status" :class="((sysData?.diskUsed || 0) / (sysData?.diskTotal || 1)) > 0.8 ? 'danger' : 'success'">
+                    {{ sysData?.diskUsed || 0 }} GB
+                  </div>
+                </div>
+                <div class="env-version">of {{ sysData?.diskTotal || 0 }} GB Total</div>
+                <div class="progress-bar-bg mt-1">
+                  <div class="progress-bar-fill" :style="{ width: `${Math.min(((sysData?.diskUsed || 0) / (sysData?.diskTotal || 1)) * 100, 100)}%`, backgroundColor: ((sysData?.diskUsed || 0) / (sysData?.diskTotal || 1)) > 0.8 ? 'var(--danger)' : 'var(--success)' }"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div style="padding: 16px;">
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Local Environment</div>
+          </div>
+          <div style="padding: 16px;">
           <div v-if="envLoading" style="color:var(--text3); font-size: 13px;">Checking environment dependencies...</div>
           <div v-else-if="envError" style="color:var(--danger); font-size: 13px;">Failed to load environment checks.</div>
           <div v-else class="env-grid">
@@ -114,6 +165,7 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </div>
@@ -156,6 +208,11 @@ const envData = ref(null)
 const envLoading = ref(true)
 const envError = ref(false)
 
+const sysData = ref(null)
+const sysLoading = ref(true)
+const sysError = ref(false)
+let sysTimer = null
+
 const loadEnvChecks = async () => {
   envLoading.value = true
   envError.value = false
@@ -172,8 +229,29 @@ const loadEnvChecks = async () => {
   }
 }
 
+const loadSysChecks = async () => {
+  try {
+    const res = await useNuxtApp().$apiFetch('/api/system/resources', {
+      baseURL: config.public.apiBase,
+      headers: auth.authHeaders()
+    })
+    sysData.value = res
+    sysError.value = false
+  } catch (e) {
+    sysError.value = true
+  } finally {
+    sysLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadEnvChecks()
+  loadSysChecks()
+  sysTimer = setInterval(loadSysChecks, 3000)
+})
+
+onUnmounted(() => {
+  if (sysTimer) clearInterval(sysTimer)
 })
 
 </script>
@@ -323,4 +401,18 @@ onMounted(() => {
   font-family: var(--mono);
   word-break: break-all;
 }
+.progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: var(--bg3);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: auto;
+}
+.progress-bar-fill {
+  height: 100%;
+  transition: width 0.5s ease-in-out, background-color 0.3s ease;
+  border-radius: 3px;
+}
+.mt-1 { margin-top: 4px; }
 </style>
