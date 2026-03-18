@@ -138,8 +138,8 @@ const form = ref({
   branch: props.app?.branch || 'main',
   trigger: props.app?.trigger || 'manual',
   token: '',
-  buildCmd: props.app?.buildCmd || '',
-  outputDir: props.app?.outputDir || '',
+  buildCmd: props.app?.buildCmd || (props.app ? '' : APP_TYPES.find(t => t.id === 'dotnet')?.buildCmd || ''),
+  outputDir: props.app?.outputDir || (props.app ? '' : APP_TYPES.find(t => t.id === 'dotnet')?.outputDir || ''),
   envVars: parseEnvVars(props.app?.envVars),
   settingFiles: [],
   scheduleEnabled: props.app?.scheduleEnabled || false,
@@ -192,11 +192,16 @@ const currentType = computed(() => APP_TYPES.find(t => t.id === form.value.type)
 const footerHint = computed(() => `Step ${currentStep.value} of ${totalSteps} — ${stepLabels[currentStep.value-1].toLowerCase()}`)
 
 const selectType = (id) => {
+  const oldType = APP_TYPES.find(x => x.id === form.value.type)
   form.value.type = id
   const t = APP_TYPES.find(x => x.id === id)
   if (t) {
-    if (!form.value.buildCmd) form.value.buildCmd = t.buildCmd
-    if (!form.value.outputDir) form.value.outputDir = t.outputDir
+    if (!form.value.buildCmd || (oldType && form.value.buildCmd === oldType.buildCmd)) {
+      form.value.buildCmd = t.buildCmd
+    }
+    if (!form.value.outputDir || (oldType && form.value.outputDir === oldType.outputDir)) {
+      form.value.outputDir = t.outputDir
+    }
   }
 }
 
@@ -246,8 +251,8 @@ const submit = async () => {
       type: form.value.type,
       repoUrl: form.value.repoUrl,
       branch: form.value.branch,
-      buildCmd: form.value.buildCmd || null,
-      outputDir: form.value.outputDir || null,
+      buildCmd: form.value.buildCmd || currentType.value?.buildCmd || null,
+      outputDir: form.value.outputDir || currentType.value?.outputDir || null,
       trigger: form.value.trigger,
       token: form.value.token || null,
       envVars: cleanEnvVars.length ? cleanEnvVars : null,
@@ -282,8 +287,8 @@ const resetForm = () => {
     branch: 'main',
     trigger: 'manual',
     token: '',
-    buildCmd: '',
-    outputDir: '',
+    buildCmd: APP_TYPES.find(t => t.id === 'dotnet')?.buildCmd || '',
+    outputDir: APP_TYPES.find(t => t.id === 'dotnet')?.outputDir || '',
     envVars: [{ key: '', val: '' }],
     settingFiles: [],
     scheduleEnabled: false,

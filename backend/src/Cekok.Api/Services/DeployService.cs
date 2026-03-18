@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
+using System.Text.Json;
 
 namespace Cekok.Api.Services;
 
@@ -136,23 +137,37 @@ public class DeployService(
         var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
         var backupDir = $"{target.DeployDir}.bak.{timestamp}";
 
+        var escapedDeployDir = $"\"{target.DeployDir}\"";
+        var escapedBackupDir = $"\"{backupDir}\"";
+        var sudoCmd = server.SshUser == "root" ? "" : $"echo '{password.Replace("'", "'\\''")}' | sudo -S ";
+
         try
         {
-            await log(server.Id, "cmd", $"$ ssh {server.SshUser}@{server.Ip} mv {target.DeployDir} {backupDir}");
+            // Ensure directory exists, then move to backup (if exists), then recreate empty target dir as owned by SSH user
+            await log(server.Id, "cmd", $"$ mkdir -p {escapedDeployDir} && mv {escapedDeployDir} {escapedBackupDir}");
             await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                $"mv {target.DeployDir} {backupDir} 2>/dev/null; mkdir -p {target.DeployDir}", ct);
+                $"{sudoCmd}bash -c \"if [ -d {escapedDeployDir} ]; then mv {escapedDeployDir} {escapedBackupDir} 2>/dev/null; fi; mkdir -p {escapedDeployDir} && chown {server.SshUser}:{server.SshUser} {escapedDeployDir}\"", ct);
 
-            await log(server.Id, "cmd", $"$ scp -r {localOutputPath}/ {server.SshUser}@{server.Ip}:{target.DeployDir}/");
+            await log(server.Id, "cmd", $"$ scp -r {localOutputPath}/ {server.SshUser}@{server.Ip}:{escapedDeployDir}/");
             await scpSvc.UploadDirectoryAsync(server.Ip, server.SshPort, server.SshUser, password,
                 localOutputPath, target.DeployDir, null, ct);
             await log(server.Id, "success", "✓ Upload complete");
 
             if (!string.IsNullOrEmpty(target.ServiceName))
             {
-                var sudoPrefix = server.SshUser == "root" ? "" : $"echo '{password.Replace("'", "'\\''")}' | sudo -S ";
-                await log(server.Id, "cmd", $"$ ssh {server.SshUser}@{server.Ip} sudo systemctl restart {target.ServiceName}");
-                await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                    $"{sudoPrefix}systemctl restart {target.ServiceName}", ct);
+                await log(server.Id, "cmd", $"$ sudo systemctl restart {target.ServiceName}");
+                try
+                {
+                    await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
+                        $"{sudoCmd}systemctl restart {target.ServiceName}", ct);
+                }
+                catch (Exception ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                {
+                    await log(server.Id, "warn", $"⚠ Service {target.ServiceName} not found. Attempting to create it...");
+                    await CreateServiceFileAsync(sshSvc, server, password, app, target, sudoCmd, log, ct);
+                    await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
+                        $"{sudoCmd}systemctl restart {target.ServiceName}", ct);
+                }
                 await Task.Delay(3000, ct);
             }
 
@@ -176,12 +191,12 @@ public class DeployService(
             try
             {
                 await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                    $"rm -rf {target.DeployDir}; mv {backupDir} {target.DeployDir}", ct);
+                    $"{sudoCmd}bash -c \"rm -rf {escapedDeployDir}; if [ -d {escapedBackupDir} ]; then mv {escapedBackupDir} {escapedDeployDir}; fi\"", ct);
                 if (!string.IsNullOrEmpty(target.ServiceName))
                 {
-                    var sudoPrefix = server.SshUser == "root" ? "" : $"echo '{password.Replace("'", "'\\''")}' | sudo -S ";
-                    await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                        $"{sudoPrefix}systemctl restart {target.ServiceName}", ct);
+                    // Ignore service restart failures during rollback
+                    await sshSvc.RunCommandDetailedAsync(server.Ip, server.SshPort, server.SshUser, password,
+                        $"{sudoCmd}systemctl restart {target.ServiceName}", ct);
                 }
                 await log(server.Id, "warn", "✓ Rollback complete");
             }
@@ -194,6 +209,63 @@ public class DeployService(
         }
         
         await db.SaveChangesAsync(ct);
+    }
+
+    private async Task CreateServiceFileAsync(SshService sshSvc, Server server, string password, 
+        Application app, DeployTarget target, string sudoCmd,
+        Func<string?, string, string, Task> log, CancellationToken ct)
+    {
+        var serviceFile = $"/etc/systemd/system/{target.ServiceName}.service";
+        var deployDir = target.DeployDir.Replace("\\", "/");
+        
+        var startCmd = app.Type.ToLower() switch {
+            "dotnet" => $"/usr/bin/env dotnet \"{deployDir}/{app.Name}.dll\"",
+            "next" or "nuxt" => $"/usr/bin/env node \"{deployDir}/server/index.mjs\"",
+            _ => $"# Please configure start command for {app.Type}"
+        };
+
+        var envVarsString = "";
+        if (target.Port.HasValue) {
+            envVarsString += $"Environment=ASPNETCORE_URLS=http://*:{target.Port}\n";
+            envVarsString += $"Environment=PORT={target.Port}\n";
+        }
+        
+        if (!string.IsNullOrEmpty(app.EnvVars)) {
+             try {
+                 using var doc = JsonDocument.Parse(app.EnvVars);
+                 foreach (var item in doc.RootElement.EnumerateArray()) {
+                     var k = item.GetProperty("key").GetString();
+                     var v = item.GetProperty("val").GetString();
+                     envVarsString += $"Environment={k}={v}\n";
+                 }
+             } catch {}
+        }
+
+        var content = $"""
+[Unit]
+Description=Cekok Service: {app.Name}
+After=network.target
+
+[Service]
+Type=simple
+User={server.SshUser}
+WorkingDirectory="{deployDir}"
+ExecStart={startCmd}
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier={target.ServiceName}
+{envVarsString}
+
+[Install]
+WantedBy=multi-user.target
+""";
+
+        await log(server.Id, "info", $"Service file content generated for {target.ServiceName}");
+        var base64Content = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(content));
+        await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
+            $"{sudoCmd}bash -c \"echo '{base64Content}' | base64 -d > {serviceFile} && systemctl daemon-reload && systemctl enable {target.ServiceName}\"", ct);
+        await log(server.Id, "success", $"✓ Created systemd service: {target.ServiceName}");
     }
 
     public async Task<DeployJob?> GetStatusAsync(string appId, CancellationToken ct) =>

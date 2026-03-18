@@ -24,8 +24,13 @@ public class SshService
     public async Task<string> RunCommandAsync(string host, int port, string user, string password,
         string command, CancellationToken ct = default)
     {
-        var res = await RunCommandDetailedAsync(host, port, user, password, command, ct);
-        return res.Output;
+        var (output, error, exitStatus) = await RunCommandDetailedAsync(host, port, user, password, command, ct);
+        if (exitStatus != 0)
+        {
+            var msg = string.IsNullOrEmpty(error) ? output : error;
+            throw new Exception($"SSH command failed with exit code {exitStatus}: {msg}");
+        }
+        return output;
     }
 
     public async IAsyncEnumerable<string> RunCommandStreamAsync(string host, int port, string user, string password,
