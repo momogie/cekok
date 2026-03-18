@@ -35,72 +35,10 @@
     </div>
 
     <div class="detail-content scrollable">
-      <div v-if="activeTab === 'overview'" class="tab-overview">
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="info-label">Current Status</div>
-            <div class="info-val">
-              <span class="status-pill" :class="statusColor">
-                {{ currentJob ? currentJob.status : 'Idle' }}
-              </span>
-            </div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Last Deploy</div>
-            <div class="info-val">{{ formatDate(app.lastDeployedAt) }}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Branch</div>
-            <div class="info-val">{{ app.branch }}</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Build Command</div>
-            <div class="info-val"><code>{{ app.buildCmd || 'None' }}</code></div>
-          </div>
-        </div>
-
-        <div v-if="currentJob" class="deploy-progress">
-          <div class="progress-header">
-            <div class="progress-title">Active Deployment: {{ currentJob.id }}</div>
-            <div class="progress-pct">{{ currentJob.progress || 0 }}%</div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: (currentJob.progress || 0) + '%' }"></div>
-          </div>
-        </div>
-
-        <div class="section-title">Schedule</div>
-        <div class="schedule-card">
-          <div class="schedule-info">
-            <div class="schedule-cron">{{ app.scheduleCron || 'No schedule' }}</div>
-            <div class="schedule-status" :class="{ enabled: app.scheduleEnabled }">
-              {{ app.scheduleEnabled ? 'Enabled' : 'Disabled' }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="activeTab === 'logs'" class="tab-logs">
-        <div class="log-terminal">
-          <div v-for="(log, i) in logs" :key="i" class="log-line">
-            <span class="log-ts">[{{ formatTimestamp(log.timestamp) }}]</span>
-            <span class="log-msg" :class="'log-' + log.type">{{ log.message }}</span>
-          </div>
-          <div v-if="!logs.length" class="empty-logs">No logs found for this application.</div>
-        </div>
-      </div>
-
-      <div v-if="activeTab === 'targets'" class="tab-targets">
-        <div v-if="!app.deployTargets?.length" class="empty-targets">No deploy targets configured.</div>
-        <div v-for="target in app.deployTargets" :key="target.serverId" class="target-card">
-          <div class="target-head">
-            <div class="target-server">Server: {{ getServerName(target.serverId) }}</div>
-            <div v-if="target.port" class="target-port">Port: {{ target.port }}</div>
-          </div>
-          <div class="target-path">Path: <code>{{ target.deployDir }}</code></div>
-          <div v-if="target.serviceName" class="target-service">Service: <code>{{ target.serviceName }}</code></div>
-        </div>
-      </div>
+      <AppOverviewTab v-if="activeTab === 'overview'" :app="app" :currentJob="currentJob" />
+      <AppLogsTab v-if="activeTab === 'logs'" :logs="logs" />
+      <AppTargetsTab v-if="activeTab === 'targets'" :app="app" />
+      <AppDeploymentHistoryTab v-if="activeTab === 'history'" :app="app" />
     </div>
   </div>
 </template>
@@ -115,22 +53,11 @@ const props = defineProps({
 const emit = defineEmits(['deploy', 'edit'])
 const activeTab = ref('overview')
 
-const serversCtx = useServers()
-
-onMounted(() => {
-  if (serversCtx.servers.length === 0) {
-    serversCtx.fetchServers()
-  }
-})
-
-const getServerName = (serverId) => {
-  return serversCtx.servers.find(s => s.id === serverId)?.name || serverId
-}
-
 const tabs = [
   { id: 'overview', label: 'Overview' },
   { id: 'logs', label: 'Logs' },
-  { id: 'targets', label: 'Targets' }
+  { id: 'targets', label: 'Targets' },
+  { id: 'history', label: 'History' }
 ]
 
 const isDeploying = computed(() => {
@@ -149,25 +76,8 @@ const iconClass = computed(() => {
   return 'icon-static'
 })
 
-const statusColor = computed(() => {
-  const s = props.currentJob?.status?.toLowerCase() || ''
-  if (s === 'success' || s === 'completed') return 'pill-success'
-  if (s === 'failed' || s === 'error') return 'pill-failed'
-  if (s === 'running' || s === 'pending') return 'pill-running'
-  return 'pill-idle'
-})
-
 const handleDeploy = () => {
   emit('deploy', props.app.id)
-}
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return 'Never'
-  return new Date(dateStr).toLocaleString()
-}
-
-const formatTimestamp = (ts) => {
-  return new Date(ts).toLocaleTimeString()
 }
 </script>
 
@@ -211,56 +121,4 @@ const formatTimestamp = (ts) => {
 
 .detail-content { flex: 1; padding: 20px; }
 .scrollable { overflow-y: auto; }
-
-.info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
-.info-label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text3); letter-spacing: 0.5px; margin-bottom: 4px; }
-.info-val { font-size: 13px; font-weight: 500; }
-.info-val code { font-family: var(--mono); font-size: 11px; background: var(--bg2); padding: 2px 5px; border-radius: 4px; }
-
-.status-pill {
-  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;
-  padding: 2px 8px; border-radius: 99px; display: inline-block;
-}
-.pill-success { background: rgba(0, 201, 167, 0.12); color: var(--accent); }
-.pill-running { background: rgba(0, 151, 255, 0.12); color: var(--accent2); animation: pulse 1.5s infinite; }
-.pill-failed { background: rgba(240, 80, 96, 0.12); color: var(--danger); }
-.pill-idle { background: var(--bg3); color: var(--text3); }
-
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
-.deploy-progress { margin-bottom: 24px; background: var(--bg2); padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
-.progress-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-.progress-title { font-size: 11px; font-weight: 600; color: var(--text2); }
-.progress-pct { font-size: 11px; font-family: var(--mono); color: var(--accent); }
-.progress-bar { height: 6px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.4s ease; }
-
-.section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text3); letter-spacing: 0.8px; margin-bottom: 10px; }
-.schedule-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-.schedule-info { display: flex; justify-content: space-between; align-items: center; }
-.schedule-cron { font-family: var(--mono); font-size: 12px; color: var(--accent2); }
-.schedule-status { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text3); }
-.schedule-status.enabled { color: var(--success); }
-
-.log-terminal {
-  background: #000; border-radius: 8px; padding: 12px; font-family: var(--mono);
-  font-size: 11px; line-height: 1.6; height: 350px; overflow-y: auto; color: #fff;
-}
-.log-ts { color: var(--text3); margin-right: 10px; font-size: 10px; }
-.log-msg { white-space: pre-wrap; word-break: break-all; }
-.log-error { color: var(--danger); }
-.log-warn { color: var(--warn); }
-.log-info { color: var(--accent2); }
-.log-success { color: var(--success); }
-.empty-logs { color: var(--text3); text-align: center; margin-top: 100px; font-style: italic; }
-
-.tab-targets { display: flex; flex-direction: column; gap: 12px; }
-.target-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-.target-head { display: flex; justify-content: space-between; margin-bottom: 8px; }
-.target-server { font-size: 11px; font-weight: 600; color: var(--text2); }
-.target-port { font-size: 10px; font-family: var(--mono); color: var(--accent); }
-.target-path { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
-.target-service { font-size: 11px; color: var(--text3); }
-.target-path code, .target-service code { color: var(--text2); background: var(--bg3); padding: 1px 4px; border-radius: 3px; font-family: var(--mono); }
-.empty-targets { color: var(--text3); text-align: center; margin-top: 50px; font-style: italic; }
 </style>
