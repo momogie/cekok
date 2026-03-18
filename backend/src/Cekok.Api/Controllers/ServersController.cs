@@ -100,8 +100,16 @@ public static class ServersController
         });
 
         group.MapGet("/{id}/sys-info", async (
-            string id, CekokDbContext db, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
         {
+            var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (role != "admin")
+            {
+                var access = await db.UserServerAccesses.AnyAsync(a => a.UserId == userId && a.ServerId == id, ct);
+                if (!access) return Results.Forbid();
+            }
+
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
@@ -131,8 +139,16 @@ public static class ServersController
         });
 
         group.MapGet("/{id}/stats", async (
-            string id, CekokDbContext db, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
         {
+            var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (role != "admin")
+            {
+                var access = await db.UserServerAccesses.AnyAsync(a => a.UserId == userId && a.ServerId == id, ct);
+                if (!access) return Results.Forbid();
+            }
+
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
@@ -175,8 +191,16 @@ public static class ServersController
         });
 
         group.MapGet("/{id}/network", async (
-            string id, CekokDbContext db, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
         {
+            var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (role != "admin")
+            {
+                var access = await db.UserServerAccesses.AnyAsync(a => a.UserId == userId && a.ServerId == id, ct);
+                if (!access) return Results.Forbid();
+            }
+
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
@@ -214,7 +238,6 @@ public static class ServersController
                         if (ufwOutput.Contains("Status:", StringComparison.OrdinalIgnoreCase))
                         {
                             var currentStatus = ufwOutput.Contains("active", StringComparison.OrdinalIgnoreCase) ? "active" : "inactive";
-                            // If UFW is active, we definitely prefer it over inactive firewalld
                             if (currentStatus == "active" || fwType == "none")
                             {
                                 fwType = "ufw";
@@ -270,8 +293,16 @@ public static class ServersController
         });
 
         group.MapGet("/{id}/processes", async (
-            string id, CekokDbContext db, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
         {
+            var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (role != "admin")
+            {
+                var access = await db.UserServerAccesses.AnyAsync(a => a.UserId == userId && a.ServerId == id, ct);
+                if (!access) return Results.Forbid();
+            }
+
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
@@ -296,8 +327,16 @@ public static class ServersController
         });
 
         group.MapPost("/{id}/execute", async (
-            string id, ExecuteCmdDto dto, CekokDbContext db, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, ExecuteCmdDto dto, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
         {
+            var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (role != "admin")
+            {
+                var access = await db.UserServerAccesses.FirstOrDefaultAsync(a => a.UserId == userId && a.ServerId == id, ct);
+                if (access == null || !access.CanManage) return Results.Forbid();
+            }
+
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
@@ -311,8 +350,16 @@ public static class ServersController
         });
 
         group.MapPost("/{id}/execute-stream", async (
-            string id, ExecuteCmdDto dto, CekokDbContext db, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, ExecuteCmdDto dto, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
         {
+            var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (role != "admin")
+            {
+                var access = await db.UserServerAccesses.FirstOrDefaultAsync(a => a.UserId == userId && a.ServerId == id, ct);
+                if (access == null || !access.CanManage) return Results.Forbid();
+            }
+
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);

@@ -8,7 +8,7 @@
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 8A7 7 0 1 1 15 8A7 7 0 1 1 1 8"/><path d="M1 8L4 5M1 8L4 11"/></svg>
           Refresh
         </button>
-        <button v-if="auth.isAdmin" class="btn btn-primary" @click="showForm = true">
+        <button v-if="canAddApp" class="btn btn-primary" @click="showForm = true">
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
           Add App
         </button>
@@ -38,7 +38,7 @@
             />
           </div>
 
-          <div v-if="auth.isAdmin" class="add-btn-row" @click="showForm = true">
+          <div v-if="canAddApp" class="add-btn-row" @click="showForm = true">
             <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
             Create new application
           </div>
@@ -83,6 +83,7 @@ const auth = useAuth()
 const appsCtx = useApps()
 const { apps, loading, currentApp, currentJob, logs } = storeToRefs(appsCtx)
 
+const canAddApp = computed(() => auth.isAdmin || auth.isOperator)
 const showForm = ref(false)
 const editApp = ref(null)
 const polling = ref(null)

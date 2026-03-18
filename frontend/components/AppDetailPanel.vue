@@ -10,7 +10,7 @@
           <span class="meta-repo">{{ app.branch }} @ {{ app.repoUrl }}</span>
         </div>
       </div>
-      <div class="header-right">
+      <div class="header-right" v-if="auth.canManage">
         <button class="btn btn-ghost btn-sm" @click="$emit('edit', app)">Edit</button>
         <button 
           class="btn btn-primary btn-sm" 
@@ -49,6 +49,7 @@
 </template>
 
 <script setup>
+const auth = useAuth()
 const props = defineProps({
   app: { type: Object, required: true },
   currentJob: { type: Object, default: null },

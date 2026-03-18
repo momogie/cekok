@@ -23,7 +23,12 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isLoggedIn: (s) => !!s.accessToken,
-    isAdmin: (s) => s.user?.role === 'admin',
+    isAdmin: (s) => s.user?.role?.toLowerCase() === 'admin',
+    isOperator: (s) => s.user?.role?.toLowerCase() === 'operator',
+    canManage: (s) => {
+      const r = s.user?.role?.toLowerCase()
+      return r === 'admin' || r === 'operator'
+    },
   },
 
   actions: {

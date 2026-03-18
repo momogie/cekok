@@ -55,7 +55,7 @@
 
       <div class="server-target-list">
         <div
-          v-for="(t, index) in form.deployTargets"
+          v-for="(t, index) in filteredTargets"
           :key="t.serverId"
           class="server-target-item selected"
         >
@@ -64,7 +64,7 @@
               <div class="sti-name">{{ getServerName(t.serverId) }}</div>
               <div class="sti-ip">{{ getServerIp(t.serverId) }}</div>
             </div>
-            <button class="env-del" @click="removeTargetServer(index)" title="Remove target">×</button>
+            <button class="env-del" @click="removeTargetServer(t.serverId)" title="Remove target">×</button>
           </div>
 
           <div class="sti-config">
@@ -127,6 +127,11 @@ const hideServerDropdown = () => {
   showServerDropdown.value = false
 }
 
+const filteredTargets = computed(() => {
+  if (!props.serversCtx.servers) return []
+  return props.form.deployTargets.filter(t => props.serversCtx.servers.some(s => s.id === t.serverId))
+})
+
 const filteredServers = computed(() => {
   if (!props.serversCtx.servers) return []
   const available = props.serversCtx.servers.filter(s => !props.form.deployTargets.some(t => t.serverId === s.id))
@@ -151,8 +156,11 @@ const addSpecificTargetServer = (id) => {
   showServerDropdown.value = false
 }
 
-const removeTargetServer = (index) => {
-  props.form.deployTargets.splice(index, 1)
+const removeTargetServer = (serverId) => {
+  const index = props.form.deployTargets.findIndex(t => t.serverId === serverId)
+  if (index !== -1) {
+    props.form.deployTargets.splice(index, 1)
+  }
 }
 
 const addEnvVar = () => emit('add-env')

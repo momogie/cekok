@@ -52,8 +52,11 @@ public static class ApplicationsController
 
         // POST /api/applications — create app
         group.MapPost("/", [Authorize(Roles = "admin,operator")] async (
-            CreateAppDto dto, CekokDbContext db, EncryptionService enc, CancellationToken ct) =>
+            CreateAppDto dto, CekokDbContext db, HttpContext ctx, EncryptionService enc, CancellationToken ct) =>
         {
+            var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             var app = new Application
             {
                 Name           = dto.Name,
@@ -95,7 +98,19 @@ public static class ApplicationsController
         // Multi-server deploy targets from new form
         if (dto.DeployTargets != null && dto.DeployTargets.Count > 0)
         {
-            foreach (var t in dto.DeployTargets)
+            var targetsToProcess = dto.DeployTargets;
+            
+            if (role != "admin")
+            {
+                var accessibleServerIds = await db.UserServerAccesses
+                    .Where(a => a.UserId == userId)
+                    .Select(a => a.ServerId)
+                    .ToListAsync(ct);
+                
+                targetsToProcess = dto.DeployTargets.Where(t => accessibleServerIds.Contains(t.ServerId)).ToList();
+            }
+
+            foreach (var t in targetsToProcess)
             {
                 db.DeployTargets.Add(new DeployTarget
                 {
@@ -111,14 +126,23 @@ public static class ApplicationsController
         // Legacy: also create a DeployTarget row if single serverId provided
         else if (dto.ServerId != null && dto.DeployDir != null)
         {
-            db.DeployTargets.Add(new DeployTarget
+            bool canAdd = true;
+            if (role != "admin")
             {
-                AppId       = app.Id,
-                ServerId    = dto.ServerId,
-                DeployDir   = dto.DeployDir,
-                ServiceName = dto.ServiceName,
-                Port        = dto.Port,
-            });
+                canAdd = await db.UserServerAccesses.AnyAsync(a => a.UserId == userId && a.ServerId == dto.ServerId, ct);
+            }
+
+            if (canAdd)
+            {
+                db.DeployTargets.Add(new DeployTarget
+                {
+                    AppId       = app.Id,
+                    ServerId    = dto.ServerId,
+                    DeployDir   = dto.DeployDir,
+                    ServiceName = dto.ServiceName,
+                    Port        = dto.Port,
+                });
+            }
         }
 
             await db.SaveChangesAsync(ct);
@@ -126,19 +150,43 @@ public static class ApplicationsController
         });
 
         // GET /api/applications/{id}
-        group.MapGet("/{id}", async (string id, CekokDbContext db, CancellationToken ct) =>
+        group.MapGet("/{id}", async (string id, CekokDbContext db, HttpContext ctx, CancellationToken ct) =>
         {
+            var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var app = await db.Applications.FindAsync([id], ct);
             if (app is null) return Results.NotFound();
             
-            app.DeployTargets = await db.DeployTargets.Where(t => t.AppId == id).ToListAsync(ct);
+            var allTargets = await db.DeployTargets.Where(t => t.AppId == id).ToListAsync(ct);
+            if (role != "admin")
+            {
+                var accessibleServerIds = await db.UserServerAccesses
+                    .Where(a => a.UserId == userId)
+                    .Select(a => a.ServerId)
+                    .ToListAsync(ct);
+                
+                // If the app has no targets yet, allowing view is fine (creator or admin typically)
+                // BUT if it has targets, only show the ones they can access.
+                // If they can't access ANY target of the app, hide the app.
+                if (allTargets.Any() && !allTargets.Any(t => accessibleServerIds.Contains(t.ServerId)))
+                    return Results.NotFound();
+
+                app.DeployTargets = allTargets.Where(t => accessibleServerIds.Contains(t.ServerId)).ToList();
+            }
+            else
+            {
+                app.DeployTargets = allTargets;
+            }
+            
             return Results.Ok(app);
         });
 
         // PUT /api/applications/{id}
         group.MapPut("/{id}", [Authorize(Roles = "admin,operator")] async (
-            string id, UpdateAppDto dto, CekokDbContext db, EncryptionService enc, CancellationToken ct) =>
+            string id, UpdateAppDto dto, CekokDbContext db, HttpContext ctx, EncryptionService enc, CancellationToken ct) =>
         {
+            var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var app = await db.Applications.FindAsync([id], ct);
             if (app is null) return Results.NotFound();
 
@@ -164,18 +212,53 @@ public static class ApplicationsController
             if (dto.DeployTargets != null)
             {
                 var existing = await db.DeployTargets.Where(t => t.AppId == id).ToListAsync(ct);
-                db.DeployTargets.RemoveRange(existing);
-                foreach (var t in dto.DeployTargets)
+                
+                if (role == "admin")
                 {
-                    db.DeployTargets.Add(new DeployTarget
+                    db.DeployTargets.RemoveRange(existing);
+                    foreach (var t in dto.DeployTargets)
                     {
-                        AppId          = id,
-                        ServerId       = t.ServerId,
-                        DeployDir      = t.DeployDir,
-                        ServiceName    = t.ServiceName,
-                        Port           = t.Port,
-                        HealthCheckUrl = t.HealthCheckUrl,
-                    });
+                        db.DeployTargets.Add(new DeployTarget
+                        {
+                            AppId          = id,
+                            ServerId       = t.ServerId,
+                            DeployDir      = t.DeployDir,
+                            ServiceName    = t.ServiceName,
+                            Port           = t.Port,
+                            HealthCheckUrl = t.HealthCheckUrl,
+                        });
+                    }
+                }
+                else
+                {
+                    var accessibleServerIds = await db.UserServerAccesses
+                        .Where(a => a.UserId == userId)
+                        .Select(a => a.ServerId)
+                        .ToListAsync(ct);
+
+                    // 1. Keep targets for servers the user CANNOT access
+                    var inaccessibleTargets = existing.Where(t => !accessibleServerIds.Contains(t.ServerId)).ToList();
+                    
+                    // 2. Filter new targets to only include servers the user CAN access
+                    var validNewTargets = dto.DeployTargets.Where(t => accessibleServerIds.Contains(t.ServerId)).ToList();
+
+                    // 3. Clear existing accessible targets
+                    var accessibleExisting = existing.Where(t => accessibleServerIds.Contains(t.ServerId)).ToList();
+                    db.DeployTargets.RemoveRange(accessibleExisting);
+
+                    // 4. Add valid new targets
+                    foreach (var t in validNewTargets)
+                    {
+                        db.DeployTargets.Add(new DeployTarget
+                        {
+                            AppId          = id,
+                            ServerId       = t.ServerId,
+                            DeployDir      = t.DeployDir,
+                            ServiceName    = t.ServiceName,
+                            Port           = t.Port,
+                            HealthCheckUrl = t.HealthCheckUrl,
+                        });
+                    }
                 }
             }
 
