@@ -158,3 +158,11 @@ public class AppSettingFile
     [Required] public string ContentEnc { get; set; } = "";
     public string UpdatedAt { get; set; } = DateTime.UtcNow.ToString("O");
 }
+public class SystemSetting
+{
+    [Key] public string Key { get; set; } = ""; // smtp_host, smtp_port, telegram_bot_token, etc.
+    [Required] public string Value { get; set; } = "";
+    public string Group { get; set; } = "general"; // mail, telegram, etc.
+    public bool IsSecure { get; set; } = false; // if true, it's encrypted
+    public string UpdatedAt { get; set; } = DateTime.UtcNow.ToString("O");
+}

@@ -27,6 +27,10 @@
             <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M3 14c0-2.8 2-5 5-5s5 2.2 5 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
             Users
           </NuxtLink>
+          <NuxtLink to="/admin/settings" class="nav-item" active-class="active">
+            <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 11a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.2"/><path d="M12.9 8.6l1.1.8c.1.1.1.3 0 .4l-1 1.7c-.1.1-.3.1-.4.1l-1.3-.5c-.3.2-.5.4-.8.5l-.2 1.4c0 .1-.2.2-.3.2h-2c-.1 0-.3-.1-.3-.2l-.2-1.4c-.3-.1-.5-.3-.8-.5l-1.3.5c-.1 0-.3 0-.4-.1l-1-1.7c-.1-.1-.1-.3 0-.4l1.1-.8c0-.2 0-.4 0-.6l-1.1-.8c-.1-.1-.1-.3 0-.4l1-1.7c.1-.1.3-.1.4-.1l1.3.5c.3-.2.5-.4.8-.5l.2-1.4c0-.1.2-.2.3-.2h2c.1 0 .3.1.3.2l.2 1.4c.3.1.5.3.8.5l1.3-.5c.1 0 .3 0 .4.1l1 1.7c.1.1.1.3 0 .4l-1.1.8c0 .2 0 .4 0 .6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            Settings
+          </NuxtLink>
         </div>
       </nav>
       <div class="sidebar-footer">

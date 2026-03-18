@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Cekok.Api.Data;
+using Cekok.Api.Models;
+using Cekok.Api.Services;
 
 namespace Cekok.Api.Controllers;
 
@@ -87,64 +91,6 @@ public static class SystemController
             var dotnet = await RunCommandAsync("dotnet", "--list-sdks", ct);
             var ssh = await RunCommandAsync("ssh", "-V", ct);
 
-            // Fetch System Resource Data
-            double cpuUsage = 0;
-            double ramUsedGb = 0;
-            double ramTotalGb = 0;
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                var cpu = await RunCommandAsync("wmic", "cpu get loadpercentage /Value", ct);
-                if (cpu.ExitCode == 0 && cpu.Output.Contains("LoadPercentage="))
-                {
-                    var valStr = cpu.Output.Split("LoadPercentage=")[1].Split('\n')[0].Trim();
-                    if (double.TryParse(valStr, out var v)) cpuUsage = v;
-                }
-
-                var mem = await RunCommandAsync("wmic", "OS get FreePhysicalMemory,TotalVisibleMemorySize /Value", ct);
-                if (mem.ExitCode == 0)
-                {
-                    double free = 0; double total = 0;
-                    foreach (var line in mem.Output.Split('\n'))
-                    {
-                        if (line.StartsWith("FreePhysicalMemory=")) double.TryParse(line.Split('=')[1].Trim(), out free);
-                        if (line.StartsWith("TotalVisibleMemorySize=")) double.TryParse(line.Split('=')[1].Trim(), out total);
-                    }
-                    if (total > 0)
-                    {
-                        ramTotalGb = total / 1024 / 1024;
-                        ramUsedGb = (total - free) / 1024 / 1024;
-                    }
-                }
-            }
-            else
-            {
-                // Linux
-                var cpu = await RunCommandAsync("bash", "-c \"top -bn1 | grep 'Cpu(s)' | awk '{print $2+$4}'\"", ct);
-                if (cpu.ExitCode == 0 && double.TryParse(cpu.Output.Trim(), out var c)) cpuUsage = c;
-
-                var mem = await RunCommandAsync("bash", "-c \"free -m | awk '/^Mem:/ {print $3, $2}'\"", ct);
-                if (mem.ExitCode == 0)
-                {
-                    var parts = mem.Output.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length >= 2 && double.TryParse(parts[0], out var u) && double.TryParse(parts[1], out var t))
-                    {
-                        ramUsedGb = u / 1024;
-                        ramTotalGb = t / 1024;
-                    }
-                }
-            }
-
-            // Disk Usage
-            var drive = DriveInfo.GetDrives().FirstOrDefault(d => d.IsReady && d.DriveType == DriveType.Fixed);
-            double diskTotalGb = 0;
-            double diskUsedGb = 0;
-            if (drive != null)
-            {
-                diskTotalGb = drive.TotalSize / 1024.0 / 1024.0 / 1024.0;
-                diskUsedGb = (drive.TotalSize - drive.AvailableFreeSpace) / 1024.0 / 1024.0 / 1024.0;
-            }
-
             return Results.Ok(new {
                 git = new {
                     installed = git.ExitCode == 0,
@@ -165,6 +111,44 @@ public static class SystemController
                     version = ssh.ExitCode == 0 ? (ssh.Error.Contains("OpenSSH") ? ssh.Error.Trim() : ssh.Output.Trim()) : null
                 }
             });
+        });
+
+        group.MapGet("/settings", [Authorize(Roles = "admin")] async (CekokDbContext db, CancellationToken ct) =>
+        {
+            var settings = await db.SystemSettings.ToListAsync(ct);
+            return Results.Ok(settings.Select(s => new {
+                s.Key,
+                Value = s.IsSecure ? "********" : s.Value,
+                s.Group,
+                s.IsSecure,
+                s.UpdatedAt
+            }));
+        });
+
+        group.MapPost("/settings", [Authorize(Roles = "admin")] async (List<UpdateSettingRequest> req, CekokDbContext db, EncryptionService encryption, CancellationToken ct) =>
+        {
+            foreach (var item in req)
+            {
+                var setting = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == item.Key, ct);
+                if (setting == null)
+                {
+                    setting = new SystemSetting { 
+                        Key = item.Key, 
+                        Group = item.Group ?? "general", 
+                        IsSecure = item.IsSecure 
+                    };
+                    db.SystemSettings.Add(setting);
+                }
+
+                if (item.IsSecure && item.Value == "********") continue;
+
+                setting.Value = item.IsSecure ? encryption.Encrypt(item.Value) : item.Value;
+                setting.IsSecure = item.IsSecure;
+                setting.Group = item.Group ?? setting.Group;
+                setting.UpdatedAt = DateTime.UtcNow.ToString("O");
+            }
+            await db.SaveChangesAsync(ct);
+            return Results.Ok();
         });
 
         return group;
@@ -205,3 +189,5 @@ public static class SystemController
         }
     }
 }
+
+public record UpdateSettingRequest(string Key, string Value, string? Group, bool IsSecure);

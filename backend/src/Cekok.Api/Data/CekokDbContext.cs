@@ -16,6 +16,7 @@ public class CekokDbContext(DbContextOptions<CekokDbContext> options) : DbContex
     public DbSet<DeployLog> DeployLogs => Set<DeployLog>();
     public DbSet<NginxConfig> NginxConfigs => Set<NginxConfig>();
     public DbSet<AppSettingFile> AppSettingFiles => Set<AppSettingFile>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
