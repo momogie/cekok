@@ -35,18 +35,7 @@ const appsCtx = useApps()
 const terminal = ref(null)
 const pollTimer = ref(null)
 
-const mockLogs = [
-  { timestamp: new Date(Date.now() - 60000).toISOString(), level: 'info', message: 'Starting deployment process...' },
-  { timestamp: new Date(Date.now() - 58000).toISOString(), level: 'info', message: 'Cloning repository (branch: main)...' },
-  { timestamp: new Date(Date.now() - 50000).toISOString(), level: 'success', message: 'Repository cloned successfully in 8.2s.' },
-  { timestamp: new Date(Date.now() - 48000).toISOString(), level: 'info', message: 'Installing dependencies...' },
-  { timestamp: new Date(Date.now() - 25000).toISOString(), level: 'warn', message: 'npm WARN deprecated fsevents@2.1.2: Please update to v 2.3.2' },
-  { timestamp: new Date(Date.now() - 15000).toISOString(), level: 'success', message: 'Dependencies installed successfully in 33s.' },
-  { timestamp: new Date(Date.now() - 14000).toISOString(), level: 'info', message: 'Building application using "npm run build"...' },
-  { timestamp: new Date(Date.now() - 4000).toISOString(), level: 'info', message: 'Build finished in 10s.' },
-  { timestamp: new Date(Date.now() - 3000).toISOString(), level: 'info', message: 'Deploying artifacts to targets...' },
-  { timestamp: new Date(Date.now() - 1000).toISOString(), level: 'success', message: 'Deployment completed successfully!' }
-]
+const mockLogs = []
 
 const displayLogs = computed(() => {
   return props.logs && props.logs.length > 0 ? props.logs : (props.jobId ? [] : mockLogs)
