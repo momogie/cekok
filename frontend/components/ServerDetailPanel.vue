@@ -108,11 +108,26 @@ const stats = computed(() => sysInfo.value?.stats)
 const managedApps = [
   { id: 'nginx', name: 'Nginx', description: 'Web server & Reverse Proxy', color: 'var(--accent)' },
   { id: 'redis', name: 'Redis', description: 'In-memory data store', color: 'var(--danger)' },
-  { id: 'dotnet', name: '.NET SDK', description: 'v8.0 Runtime & SDK', color: 'var(--purple)' }
+  { id: 'dotnet-sdk-10.0', name: '.NET SDK 10.0', description: 'LTS Runtime & SDK', color: 'var(--purple)' },
+  { id: 'dotnet-sdk-8.0', name: '.NET SDK 8.0', description: 'LTS Runtime & SDK', color: 'var(--purple)' },
+  { id: 'dotnet-runtime-10.0', name: '.NET Runtime 10.0', description: 'LTS ASP.NET Core Runtime', color: 'var(--purple)' },
+  { id: 'dotnet-runtime-8.0', name: '.NET Runtime 8.0', description: 'LTS ASP.NET Core Runtime', color: 'var(--purple)' }
 ]
-const systemAppStatuses = ref({ nginx: 'unknown', redis: 'unknown', dotnet: 'unknown' })
-const installing = ref({ nginx: false, redis: false, dotnet: false })
-const appLastResults = ref({ nginx: null, redis: null, dotnet: null })
+const systemAppStatuses = ref({ 
+  nginx: 'unknown', redis: 'unknown', 
+  'dotnet-sdk-10.0': 'unknown', 'dotnet-sdk-8.0': 'unknown',
+  'dotnet-runtime-10.0': 'unknown', 'dotnet-runtime-8.0': 'unknown'
+})
+const installing = ref({ 
+  nginx: false, redis: false, 
+  'dotnet-sdk-10.0': false, 'dotnet-sdk-8.0': false,
+  'dotnet-runtime-10.0': false, 'dotnet-runtime-8.0': false
+})
+const appLastResults = ref({ 
+  nginx: null, redis: null, 
+  'dotnet-sdk-10.0': null, 'dotnet-sdk-8.0': null,
+  'dotnet-runtime-10.0': null, 'dotnet-runtime-8.0': null
+})
 
 const downloadSpeed = ref('0 B/s')
 const uploadSpeed = ref('0 B/s')

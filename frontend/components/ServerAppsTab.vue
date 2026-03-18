@@ -7,7 +7,7 @@
           <div class="app-icon" :style="{ background: app.color + '1a', color: app.color }">
             <span v-if="app.id === 'nginx'">NG</span>
             <span v-else-if="app.id === 'redis'">RD</span>
-            <span v-else-if="app.id === 'dotnet'">.NET</span>
+            <span v-else-if="app.id.startsWith('dotnet')">.NET</span>
           </div>
           <div class="app-info">
             <div class="app-name">{{ app.name }}</div>
