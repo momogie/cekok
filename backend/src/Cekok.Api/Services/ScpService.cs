@@ -25,4 +25,26 @@ public class ScpService
             client.Disconnect();
         }, ct);
     }
+
+    /// <summary>
+    /// Upload a single file to remote server via SCP.
+    /// </summary>
+    public async Task UploadFileAsync(string host, int port, string user, string password,
+        string localFile, string remoteTarget, IProgress<int>? progress = null,
+        CancellationToken ct = default)
+    {
+        using var client = new ScpClient(host, port, user, password);
+        await Task.Run(() =>
+        {
+            client.Connect();
+            client.Uploading += (sender, e) =>
+            {
+                if (e.Size > 0)
+                    progress?.Report((int)(e.Uploaded * 100 / e.Size));
+            };
+            var file = new FileInfo(localFile);
+            client.Upload(file, remoteTarget);
+            client.Disconnect();
+        }, ct);
+    }
 }

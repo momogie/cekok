@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
 using System.Text.Json;
+using System.IO;
+using System.IO.Compression;
 
 namespace Cekok.Api.Services;
 
@@ -82,6 +84,13 @@ public class DeployService(
             var outputPath = await scopeBuild.BuildAsync(app, jobId,
                 (level, msg) => Log(null!, level, msg).Wait(),
                 ct);
+
+            // [3.2] Compress build output
+            var zipFile = Path.Combine(Path.GetDirectoryName(outputPath) ?? outputPath, "deploy.zip");
+            await Log(null!, "info", "Compressing build output for efficient transfer...");
+            if (File.Exists(zipFile)) File.Delete(zipFile);
+            ZipFile.CreateFromDirectory(outputPath, zipFile);
+            await Log(null!, "success", "✓ Build output compressed");
             
             // [3.5] Validate entrypoint file
             var entryFileRel = app.Type.ToLower() switch {
@@ -117,7 +126,7 @@ public class DeployService(
             // [5] Deploy to all targets (Run sequentially to avoid EF Core concurrency issues)
             foreach (var target in targets)
             {
-                await DeployToTargetInternalAsync(scopeDb, scopeSsh, scopeScp, scopeHealth, scopeEnc, job, app, target, outputPath, Log, ct);
+                await DeployToTargetInternalAsync(scopeDb, scopeSsh, scopeScp, scopeHealth, scopeEnc, job, app, target, outputPath, zipFile, Log, ct);
             }
 
             var allSuccess = targets.All(t => t.Status == "success");
@@ -144,7 +153,7 @@ public class DeployService(
 
     private async Task DeployToTargetInternalAsync(
         CekokDbContext db, SshService sshSvc, ScpService scpSvc, HealthCheckService healthSvc, EncryptionService encSvc,
-        DeployJob job, Application app, DeployTarget target, string localOutputPath, 
+        DeployJob job, Application app, DeployTarget target, string localOutputPath, string localZipPath,
         Func<string?, string, string, Task> log, CancellationToken ct)
     {
         var server = await db.Servers.FindAsync([target.ServerId], ct);
@@ -152,23 +161,49 @@ public class DeployService(
 
         var password = encSvc.Decrypt(server.SshPasswordEnc);
         var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        var backupDir = $"{target.DeployDir}.bak.{timestamp}";
-
-        var escapedDeployDir = $"\"{target.DeployDir}\"";
-        var escapedBackupDir = $"\"{backupDir}\"";
+        
+        var deployDir = target.DeployDir.Replace("\\", "/").TrimEnd('/');
+        var releasesDir = $"{deployDir}_releases";
+        var releasePath = $"{releasesDir}/{timestamp}";
+        
+        var escapedDeployDir = $"\"{deployDir}\"";
+        var escapedReleasesDir = $"\"{releasesDir}\"";
+        var escapedReleasePath = $"\"{releasePath}\"";
+        
         var sudoCmd = server.SshUser == "root" ? "" : $"echo '{password.Replace("'", "'\\''")}' | sudo -S ";
+
+        // Try to get previous release for rollback if needed
+        string? previousRelease = null;
+        try {
+            previousRelease = (await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password, $"readlink -f {escapedDeployDir}", ct)).Trim();
+            if (string.IsNullOrEmpty(previousRelease) || previousRelease == deployDir) previousRelease = null;
+        } catch {}
 
         try
         {
-            // Ensure directory exists, then move to backup (if exists), then recreate empty target dir as owned by SSH user
-            await log(server.Id, "cmd", $"$ mkdir -p {escapedDeployDir} && mv {escapedDeployDir} {escapedBackupDir}");
+            // [1] Prepare release directory
+            await log(server.Id, "cmd", $"$ mkdir -p {escapedReleasePath}");
             await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                $"{sudoCmd}bash -c \"if [ -d {escapedDeployDir} ]; then mv {escapedDeployDir} {escapedBackupDir} 2>/dev/null; fi; mkdir -p {escapedDeployDir} && chown {server.SshUser}:{server.SshUser} {escapedDeployDir}\"", ct);
+                $"{sudoCmd}mkdir -p {escapedReleasePath} && {sudoCmd}chown -R {server.SshUser}:{server.SshUser} {escapedReleasesDir}", ct);
 
-            await log(server.Id, "cmd", $"$ scp -r {localOutputPath}/ {server.SshUser}@{server.Ip}:{escapedDeployDir}/");
-            await scpSvc.UploadDirectoryAsync(server.Ip, server.SshPort, server.SshUser, password,
-                localOutputPath, target.DeployDir, null, ct);
-            await log(server.Id, "success", "✓ Upload complete");
+            // [2] Upload build archive
+            await log(server.Id, "cmd", $"$ scp deploy.zip {server.SshUser}@{server.Ip}:{escapedReleasePath}/");
+            var remoteZip = $"{releasePath}/deploy.zip";
+            await scpSvc.UploadFileAsync(server.Ip, server.SshPort, server.SshUser, password,
+                localZipPath, remoteZip, null, ct);
+            await log(server.Id, "success", "✓ File transfer complete");
+
+            // [3] Extract build archive
+            await log(server.Id, "cmd", $"$ unzip deploy.zip");
+            await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
+                $"{sudoCmd}bash -c \"cd {escapedReleasePath} && (unzip -o deploy.zip || python3 -m zipfile -e deploy.zip . || tar -xf deploy.zip) && rm deploy.zip\"", ct);
+            await log(server.Id, "success", "✓ Extraction complete");
+
+            // [4] Atomic symlink swap
+            await log(server.Id, "cmd", $"$ ln -sfn {releasePath} {deployDir}");
+            await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
+                $"{sudoCmd}bash -c \"if [ -d {escapedDeployDir} ] && [ ! -L {escapedDeployDir} ]; then mv {escapedDeployDir} {escapedReleasesDir}/migration_{timestamp}; fi; ln -sfn {escapedReleasePath} {escapedDeployDir}\"", ct);
+            await log(server.Id, "success", "✓ Symlink updated");
 
             if (!string.IsNullOrEmpty(target.ServiceName))
             {
@@ -189,6 +224,10 @@ public class DeployService(
                 await log(server.Id, "success", $"✓ Health check OK");
             }
 
+            // [5] Cleanup old releases (keep latest 5)
+            await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
+                $"{sudoCmd}bash -c \"ls -dt {escapedReleasesDir}/* | tail -n +6 | xargs rm -rf 2>/dev/null || true\"", ct);
+
             target.Status = "success";
             await log(server.Id, "success", $"✓ Deploy complete");
         }
@@ -197,14 +236,22 @@ public class DeployService(
             await log(server.Id, "error", $"✗ Deploy failed: {ex.Message}");
             await log(server.Id, "error", "↩ Auto-rollback triggered");
 
-            // Rollback
+            // Rollback symlink if we have a previous release
             try
             {
-                await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                    $"{sudoCmd}bash -c \"rm -rf {escapedDeployDir}; if [ -d {escapedBackupDir} ]; then mv {escapedBackupDir} {escapedDeployDir}; fi\"", ct);
+                if (!string.IsNullOrEmpty(previousRelease))
+                {
+                    await log(server.Id, "info", $"Rolling back symlink to: {previousRelease}");
+                    await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
+                        $"{sudoCmd}ln -sfn \"{previousRelease}\" {escapedDeployDir}", ct);
+                }
+                else
+                {
+                    await log(server.Id, "warn", "No previous release found to rollback to");
+                }
+
                 if (!string.IsNullOrEmpty(target.ServiceName))
                 {
-                    // Ignore service restart failures during rollback
                     await sshSvc.RunCommandDetailedAsync(server.Ip, server.SshPort, server.SshUser, password,
                         $"{sudoCmd}systemctl restart {target.ServiceName}", ct);
                 }
@@ -260,7 +307,7 @@ After=network.target
 [Service]
 Type=simple
 User={server.SshUser}
-WorkingDirectory="{deployDir}"
+WorkingDirectory={deployDir}
 ExecStart={startCmd}
 Restart=always
 RestartSec=10
