@@ -20,6 +20,12 @@ public static class SystemController
             double cpuUsage = 0;
             double ramUsedGb = 0;
             double ramTotalGb = 0;
+            string cpuName = "Unknown";
+            string hostname = Environment.MachineName;
+            int vcpuCount = Environment.ProcessorCount;
+            
+            var uptimeSpan = TimeSpan.FromMilliseconds(Environment.TickCount64);
+            string uptime = $"{(int)uptimeSpan.TotalDays}d {uptimeSpan.Hours}h {uptimeSpan.Minutes}m";
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -28,6 +34,12 @@ public static class SystemController
                 {
                     var valStr = cpu.Output.Split("LoadPercentage=")[1].Split('\n')[0].Trim();
                     if (double.TryParse(valStr, out var v)) cpuUsage = v;
+                }
+
+                var cpuNameRes = await RunCommandAsync("wmic", "cpu get name /Value", ct);
+                if (cpuNameRes.ExitCode == 0 && cpuNameRes.Output.Contains("Name="))
+                {
+                    cpuName = cpuNameRes.Output.Split("Name=")[1].Split('\n')[0].Trim();
                 }
 
                 var mem = await RunCommandAsync("wmic", "OS get FreePhysicalMemory,TotalVisibleMemorySize /Value", ct);
@@ -52,6 +64,9 @@ public static class SystemController
                 // Linux
                 var cpu = await RunCommandAsync("bash", "-c \"top -bn1 | grep 'Cpu(s)' | awk '{print $2+$4}'\"", ct);
                 if (cpu.ExitCode == 0 && double.TryParse(cpu.Output.Trim(), out var c)) cpuUsage = c;
+
+                var cpuNameRes = await RunCommandAsync("bash", "-c \"grep 'model name' /proc/cpuinfo | head -n 1 | awk -F': ' '{print $2}'\"", ct);
+                if (cpuNameRes.ExitCode == 0) cpuName = cpuNameRes.Output.Trim();
 
                 var mem = await RunCommandAsync("bash", "-c \"free -m | awk '/^Mem:/ {print $3, $2}'\"", ct);
                 if (mem.ExitCode == 0)
@@ -80,7 +95,12 @@ public static class SystemController
                 ramUsed = Math.Round(ramUsedGb, 1),
                 ramTotal = Math.Round(ramTotalGb, 1),
                 diskUsed = Math.Round(diskUsedGb, 1),
-                diskTotal = Math.Round(diskTotalGb, 1)
+                diskTotal = Math.Round(diskTotalGb, 1),
+                hostname,
+                cpuName,
+                vcpuCount,
+                uptime,
+                osVersion = RuntimeInformation.OSDescription
             });
         });
 
