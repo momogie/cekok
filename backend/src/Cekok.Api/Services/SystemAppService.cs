@@ -77,11 +77,11 @@ public class SystemAppService(CekokDbContext db, SshService sshSvc, EncryptionSe
         {
             "nginx" => $"{sudoPrefix}bash -c 'export DEBIAN_FRONTEND=noninteractive; apt-get update -qq -o Acquire::ForceIPv4=true || true; apt-get install -y -o Acquire::ForceIPv4=true -o Dpkg::Options::=\"--force-confold\" -o Dpkg::Options::=\"--force-confdef\" --fix-missing nginx && systemctl enable --now nginx'",
             "redis" => $"{sudoPrefix}bash -c 'export DEBIAN_FRONTEND=noninteractive; apt-get update -qq -o Acquire::ForceIPv4=true || true; apt-get install -y -o Acquire::ForceIPv4=true -o Dpkg::Options::=\"--force-confold\" -o Dpkg::Options::=\"--force-confdef\" --fix-missing redis-server && systemctl enable --now redis-server'",
-            "dotnet-sdk-8.0" => $"{sudoPrefix}bash -c 'export DEBIAN_FRONTEND=noninteractive; apt-get update -qq -o Acquire::ForceIPv4=true || true; apt-get install -y -o Acquire::ForceIPv4=true wget ca-certificates || true; . /etc/os-release; wget -q \"https://packages.microsoft.com/config/$ID/$VERSION_ID/packages-microsoft-prod.deb\" -O prod.deb || wget -q \"https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb\" -O prod.deb; if [ -f prod.deb ]; then dpkg -i --force-confold --force-confdef prod.deb && rm prod.deb && apt-get update -qq -o Acquire::ForceIPv4=true || true; fi; apt-get install -y -o Acquire::ForceIPv4=true -o Dpkg::Options::=\"--force-confold\" -o Dpkg::Options::=\"--force-confdef\" --fix-missing dotnet-sdk-8.0'",
-            "dotnet-sdk-10.0" => $"{sudoPrefix}bash -c 'export DEBIAN_FRONTEND=noninteractive; apt-get update -qq -o Acquire::ForceIPv4=true || true; apt-get install -y -o Acquire::ForceIPv4=true wget ca-certificates || true; . /etc/os-release; wget -q \"https://packages.microsoft.com/config/$ID/$VERSION_ID/packages-microsoft-prod.deb\" -O prod.deb || wget -q \"https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb\" -O prod.deb; if [ -f prod.deb ]; then dpkg -i --force-confold --force-confdef prod.deb && rm prod.deb && apt-get update -qq -o Acquire::ForceIPv4=true || true; fi; apt-get install -y -o Acquire::ForceIPv4=true -o Dpkg::Options::=\"--force-confold\" -o Dpkg::Options::=\"--force-confdef\" --fix-missing dotnet-sdk-10.0'",
-            "dotnet-runtime-8.0" => $"{sudoPrefix}bash -c 'export DEBIAN_FRONTEND=noninteractive; apt-get update -qq -o Acquire::ForceIPv4=true || true; apt-get install -y -o Acquire::ForceIPv4=true wget ca-certificates || true; . /etc/os-release; wget -q \"https://packages.microsoft.com/config/$ID/$VERSION_ID/packages-microsoft-prod.deb\" -O prod.deb || wget -q \"https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb\" -O prod.deb; if [ -f prod.deb ]; then dpkg -i --force-confold --force-confdef prod.deb && rm prod.deb && apt-get update -qq -o Acquire::ForceIPv4=true || true; fi; apt-get install -y -o Acquire::ForceIPv4=true -o Dpkg::Options::=\"--force-confold\" -o Dpkg::Options::=\"--force-confdef\" --fix-missing aspnetcore-runtime-8.0'",
-            "dotnet-runtime-10.0" => $"{sudoPrefix}bash -c 'export DEBIAN_FRONTEND=noninteractive; apt-get update -qq -o Acquire::ForceIPv4=true || true; apt-get install -y -o Acquire::ForceIPv4=true wget ca-certificates || true; . /etc/os-release; wget -q \"https://packages.microsoft.com/config/$ID/$VERSION_ID/packages-microsoft-prod.deb\" -O prod.deb || wget -q \"https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb\" -O prod.deb; if [ -f prod.deb ]; then dpkg -i --force-confold --force-confdef prod.deb && rm prod.deb && apt-get update -qq -o Acquire::ForceIPv4=true || true; fi; apt-get install -y -o Acquire::ForceIPv4=true -o Dpkg::Options::=\"--force-confold\" -o Dpkg::Options::=\"--force-confdef\" --fix-missing aspnetcore-runtime-10.0'",
-            "dotnet" => $"{sudoPrefix}bash -c 'apt-get install -y dotnet-sdk-10.0'",
+            "dotnet-sdk-8.0" => GetDotnetInstallCommand(sudoPrefix, "8.0", "sdk", "dotnet-sdk-8.0"),
+            "dotnet-sdk-10.0" => GetDotnetInstallCommand(sudoPrefix, "10.0", "sdk", "dotnet-sdk-10.0"),
+            "dotnet-runtime-8.0" => GetDotnetInstallCommand(sudoPrefix, "8.0", "aspnetcore", "aspnetcore-runtime-8.0"),
+            "dotnet-runtime-10.0" => GetDotnetInstallCommand(sudoPrefix, "10.0", "aspnetcore", "aspnetcore-runtime-10.0"),
+            "dotnet" => GetDotnetInstallCommand(sudoPrefix, "10.0", "sdk", "dotnet-sdk-10.0"),
             "node" => $"{sudoPrefix}bash -c 'export DEBIAN_FRONTEND=noninteractive; apt-get update -qq || true; apt-get install -y curl || true; curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y -o Dpkg::Options::=\"--force-confold\" -o Dpkg::Options::=\"--force-confdef\" nodejs'",
             _ => throw new ArgumentException("Invalid App ID")
         };
@@ -138,6 +138,22 @@ public class SystemAppService(CekokDbContext db, SshService sshSvc, EncryptionSe
                 await db.SaveChangesAsync(ct);
             }
         }
+    }
+
+    private static string GetDotnetInstallCommand(string sudoPrefix, string version, string type, string pkgName)
+    {
+        var runtimeArg = type == "aspnetcore" ? "--runtime aspnetcore" : "";
+
+        return $"{sudoPrefix}bash -c 'export DEBIAN_FRONTEND=noninteractive; " +
+               "apt-get update -qq -o Acquire::ForceIPv4=true || true; " +
+               "apt-get install -y -o Acquire::ForceIPv4=true wget ca-certificates curl || true; " +
+               ". /etc/os-release; " +
+               "wget -q \"https://packages.microsoft.com/config/$ID/$VERSION_ID/packages-microsoft-prod.deb\" -O prod.deb || " +
+               "wget -q \"https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb\" -O prod.deb; " +
+               "if [ -f prod.deb ]; then dpkg -i --force-confold --force-confdef prod.deb && rm prod.deb && apt-get update -qq -o Acquire::ForceIPv4=true || true; fi; " +
+               $"apt-get install -y -o Acquire::ForceIPv4=true -o Dpkg::Options::=\"--force-confold\" -o Dpkg::Options::=\"--force-confdef\" --fix-missing {pkgName} || " +
+               $"(curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel {version} {runtimeArg} --install-dir /usr/share/dotnet && " +
+               "ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet)'";
     }
 }
 
