@@ -79,10 +79,27 @@ public class DeployService(
             job.StartedAt = DateTime.UtcNow.ToString("O");
             await scopeDb.SaveChangesAsync(ct);
 
-            // [3] Build
             var outputPath = await scopeBuild.BuildAsync(app, jobId,
                 (level, msg) => Log(null!, level, msg).Wait(),
                 ct);
+            
+            // [3.5] Validate entrypoint file
+            var entryFileRel = app.Type.ToLower() switch {
+                "dotnet" => string.IsNullOrEmpty(app.EntryFile) ? $"{app.Name}.dll" : app.EntryFile,
+                "next" or "nuxt" => string.IsNullOrEmpty(app.EntryFile) ? "server/index.mjs" : app.EntryFile,
+                "node" => string.IsNullOrEmpty(app.EntryFile) ? "index.js" : app.EntryFile,
+                _ => app.EntryFile ?? ""
+            };
+            if (!string.IsNullOrEmpty(entryFileRel))
+            {
+                var fullEntryPath = Path.Combine(outputPath, entryFileRel);
+                if (!File.Exists(fullEntryPath))
+                {
+                    // Check if it might be in the root if it's not in the specified path
+                    throw new Exception($"Entry point file not found in build output: {entryFileRel}. Please verify 'Build output dir' or 'Entry file name'. (Looked in: {outputPath})");
+                }
+                await Log(null!, "success", $"✓ Validated entry point: {entryFileRel}");
+            }
 
             // [4] Inject settings files
             var configFiles = await scopeDb.AppSettingFiles.Where(f => f.AppId == app.Id).ToListAsync(ct);
@@ -155,19 +172,12 @@ public class DeployService(
 
             if (!string.IsNullOrEmpty(target.ServiceName))
             {
+                await log(server.Id, "info", $"Ensuring systemd service {target.ServiceName} is up to date...");
+                await CreateServiceFileAsync(sshSvc, server, password, app, target, sudoCmd, log, ct);
+                
                 await log(server.Id, "cmd", $"$ sudo systemctl restart {target.ServiceName}");
-                try
-                {
-                    await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                        $"{sudoCmd}systemctl restart {target.ServiceName}", ct);
-                }
-                catch (Exception ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
-                {
-                    await log(server.Id, "warn", $"⚠ Service {target.ServiceName} not found. Attempting to create it...");
-                    await CreateServiceFileAsync(sshSvc, server, password, app, target, sudoCmd, log, ct);
-                    await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
-                        $"{sudoCmd}systemctl restart {target.ServiceName}", ct);
-                }
+                await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, password,
+                    $"{sudoCmd}systemctl restart {target.ServiceName}", ct);
                 await Task.Delay(3000, ct);
             }
 
@@ -219,9 +229,10 @@ public class DeployService(
         var deployDir = target.DeployDir.Replace("\\", "/");
         
         var startCmd = app.Type.ToLower() switch {
-            "dotnet" => $"/usr/bin/env dotnet \"{deployDir}/{app.Name}.dll\"",
-            "next" or "nuxt" => $"/usr/bin/env node \"{deployDir}/server/index.mjs\"",
-            _ => $"# Please configure start command for {app.Type}"
+            "dotnet" => $"/usr/bin/env dotnet \"{deployDir}/{(string.IsNullOrEmpty(app.EntryFile) ? $"{app.Name}.dll" : app.EntryFile)}\"",
+            "next" or "nuxt" => $"/usr/bin/env node \"{deployDir}/{(string.IsNullOrEmpty(app.EntryFile) ? "server/index.mjs" : app.EntryFile)}\"",
+            "node" => $"/usr/bin/env node \"{deployDir}/{(string.IsNullOrEmpty(app.EntryFile) ? "index.js" : app.EntryFile)}\"",
+            _ => !string.IsNullOrEmpty(app.EntryFile) ? $"\"{deployDir}/{app.EntryFile}\"" : $"# Please configure start command for {app.Type}"
         };
 
         var envVarsString = "";

@@ -87,6 +87,7 @@ public class Application
     public int? Port { get; set; }
     public string? ScheduleCron { get; set; }
     public bool ScheduleEnabled { get; set; } = false;
+    public string? EntryFile { get; set; }
     public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("O");
 
     [NotMapped]

@@ -21,6 +21,10 @@
         <div class="info-label">Build Command</div>
         <div class="info-val"><code>{{ app.buildCmd || 'None' }}</code></div>
       </div>
+      <div class="info-item">
+        <div class="info-label">Entry Point</div>
+        <div class="info-val"><code>{{ app.entryFile || 'None' }}</code></div>
+      </div>
     </div>
 
     <div v-if="currentJob" class="deploy-progress">

@@ -11,6 +11,10 @@
         <label class="form-label">Build output dir</label>
         <input v-model="form.outputDir" class="form-input" :placeholder="currentType?.outputDir">
       </div>
+      <div class="form-group">
+        <label class="form-label">Entry file name</label>
+        <input v-model="form.entryFile" class="form-input" :placeholder="currentType?.entryFile || 'index.js'">
+      </div>
     </div>
 
     <!-- Deploy targets: multi-server -->

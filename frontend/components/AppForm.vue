@@ -105,9 +105,9 @@ const APP_TYPES = [
   { id:'dotnet', icon:'.NT', cls:'icon-dotnet', name:'.NET / C#',   desc:'ASP.NET Core API, Worker, Blazor',    buildCmd:'dotnet publish -c Release -o ./publish', outputDir:'publish/' },
   { id:'nuxt',   icon:'NX',  cls:'icon-nuxt',   name:'Nuxt 3',       desc:'SSR or static site generation',       buildCmd:'npm run build',                          outputDir:'.output/' },
   { id:'vue',    icon:'VU',  cls:'icon-vue',     name:'Vue / Vite',   desc:'SPA — served via nginx',              buildCmd:'npm run build',                          outputDir:'dist/' },
-  { id:'node',   icon:'JS',  cls:'icon-node',    name:'Node.js',      desc:'Express, Fastify, NestJS',            buildCmd:'npm install && npm run build',           outputDir:'dist/' },
+  { id:'node',   icon:'JS',  cls:'icon-node',    name:'Node.js',      desc:'Express, Fastify, NestJS',            buildCmd:'npm install && npm run build',           outputDir:'dist/', entryFile: 'index.js' },
   { id:'react',  icon:'RE',  cls:'icon-react',   name:'React',        desc:'Vite/CRA — served via nginx',         buildCmd:'npm run build',                          outputDir:'dist/' },
-  { id:'php',    icon:'PH',  cls:'icon-php',     name:'PHP (Laravel)',desc:'Artisan, Composer based',              buildCmd:'composer install --no-dev',              outputDir:'./' },
+  { id:'php',    icon:'PH',  cls:'icon-php',     name:'PHP (Laravel)',desc:'Artisan, Composer based',              buildCmd:'composer install --no-dev',              outputDir:'./', entryFile: 'public/index.php' },
 ]
 
 const CRON_PRESETS = [
@@ -140,6 +140,7 @@ const form = ref({
   token: '',
   buildCmd: props.app?.buildCmd || (props.app ? '' : APP_TYPES.find(t => t.id === 'dotnet')?.buildCmd || ''),
   outputDir: props.app?.outputDir || (props.app ? '' : APP_TYPES.find(t => t.id === 'dotnet')?.outputDir || ''),
+  entryFile: props.app?.entryFile || (props.app ? '' : APP_TYPES.find(t => t.id === 'dotnet')?.entryFile || ''),
   envVars: parseEnvVars(props.app?.envVars),
   settingFiles: [],
   scheduleEnabled: props.app?.scheduleEnabled || false,
@@ -202,6 +203,9 @@ const selectType = (id) => {
     if (!form.value.outputDir || (oldType && form.value.outputDir === oldType.outputDir)) {
       form.value.outputDir = t.outputDir
     }
+    if (!form.value.entryFile || (oldType && form.value.entryFile === oldType.entryFile)) {
+      form.value.entryFile = t.entryFile || ''
+    }
   }
 }
 
@@ -253,6 +257,7 @@ const submit = async () => {
       branch: form.value.branch,
       buildCmd: form.value.buildCmd || currentType.value?.buildCmd || null,
       outputDir: form.value.outputDir || currentType.value?.outputDir || null,
+      entryFile: form.value.entryFile || currentType.value?.entryFile || null,
       trigger: form.value.trigger,
       token: form.value.token || null,
       envVars: cleanEnvVars.length ? cleanEnvVars : null,
@@ -289,6 +294,7 @@ const resetForm = () => {
     token: '',
     buildCmd: APP_TYPES.find(t => t.id === 'dotnet')?.buildCmd || '',
     outputDir: APP_TYPES.find(t => t.id === 'dotnet')?.outputDir || '',
+    entryFile: APP_TYPES.find(t => t.id === 'dotnet')?.entryFile || '',
     envVars: [{ key: '', val: '' }],
     settingFiles: [],
     scheduleEnabled: false,

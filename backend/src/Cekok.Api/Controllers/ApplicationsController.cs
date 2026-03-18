@@ -70,6 +70,7 @@ public static class ApplicationsController
                 Port           = dto.Port,
                 ScheduleCron   = dto.ScheduleCron,
                 ScheduleEnabled = dto.ScheduleEnabled,
+                EntryFile      = dto.EntryFile,
             };
             db.Applications.Add(app);
 
@@ -145,6 +146,7 @@ public static class ApplicationsController
             if (dto.Trigger     != null) app.Trigger     = dto.Trigger;
             if (dto.ScheduleCron    != null)    app.ScheduleCron    = dto.ScheduleCron;
             if (dto.ScheduleEnabled.HasValue)   app.ScheduleEnabled = dto.ScheduleEnabled.Value;
+            if (dto.EntryFile       != null)    app.EntryFile       = dto.EntryFile;
             if (dto.EnvVars != null)
                 app.EnvVars = JsonSerializer.Serialize(dto.EnvVars);
             if (!string.IsNullOrWhiteSpace(dto.Token))
@@ -239,7 +241,8 @@ public static class ApplicationsController
         int? Port,
         string? ServerId,
         string? ScheduleCron,
-        bool ScheduleEnabled
+        bool ScheduleEnabled,
+        string? EntryFile
     );
 
     public record UpdateAppDto(
@@ -255,7 +258,8 @@ public static class ApplicationsController
         /// <summary>Multi-server deploy targets — replaces all existing targets when provided</summary>
         List<DeployTargetDto>? DeployTargets,
         string? ScheduleCron,
-        bool? ScheduleEnabled
+        bool? ScheduleEnabled,
+        string? EntryFile
     );
 
     public record EnvVarDto(string Key, string Val);

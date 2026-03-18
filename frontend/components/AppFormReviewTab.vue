@@ -14,6 +14,7 @@
     <div class="review-block">
       <div class="review-row"><span class="review-key">Build cmd</span><span class="review-val">{{ form.buildCmd || currentType?.buildCmd }}</span></div>
       <div class="review-row"><span class="review-key">Output dir</span><span class="review-val">{{ form.outputDir || currentType?.outputDir || '—' }}</span></div>
+      <div class="review-row"><span class="review-key">Entry point</span><span class="review-val">{{ form.entryFile || currentType?.entryFile || '—' }}</span></div>
     </div>
     <div class="review-section-title">Deploy targets ({{ form.deployTargets.length }})</div>
     <div v-if="form.deployTargets.length === 0" class="review-block">
