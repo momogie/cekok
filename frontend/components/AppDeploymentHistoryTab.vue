@@ -1,21 +1,29 @@
 <template>
   <div class="deployment-history">
     <div v-if="!selectedHistory" class="history-list">
+      <div v-if="loading" class="empty-state">Loading history...</div>
+      <div v-else-if="!history.length" class="empty-state">No deployment history found.</div>
+      
       <div 
-        v-for="item in mockHistory" 
+        v-for="item in history" 
         :key="item.id" 
         class="history-card"
-        @click="selectedHistory = item"
+        @click="selectJob(item)"
       >
         <div class="history-header">
           <div class="history-status" :class="item.status.toLowerCase()">
             <span class="status-indicator"></span>
             {{ item.status }}
           </div>
-          <div class="history-time">{{ item.time }}</div>
+          <div class="history-time">{{ formatTime(item.startedAt || item.finishedAt) }}</div>
         </div>
-        <div class="history-title">Deploy {{ item.version }}</div>
-        <div class="history-meta">Commit {{ item.commitHash }} by {{ item.author }}</div>
+        <div class="history-title">Deploy {{ item.commitHash?.substring(0, 7) || 'Manual' }}</div>
+        <div class="history-meta">
+          <span v-if="item.commitMsg">{{ item.commitMsg }}</span>
+          <span v-else>Triggered by {{ item.triggeredBy }}</span>
+          <span class="meta-sep">•</span>
+          <span>Hash: {{ item.commitHash || 'N/A' }}</span>
+        </div>
       </div>
     </div>
 
@@ -26,191 +34,155 @@
         </button>
         <div class="pipeline-title">
           <span>Deployment Pipeline</span>
-          <span class="version-badge">{{ selectedHistory.version }}</span>
+          <span class="version-badge">{{ selectedHistory.commitHash?.substring(0, 7) || 'Manual' }}</span>
+        </div>
+        <div class="pipeline-status-badge" :class="selectedHistory.status.toLowerCase()">
+          {{ selectedHistory.status }}
         </div>
       </div>
 
       <div class="pipeline-steps">
         <!-- 1. Pre-check -->
-        <div class="step-card" :class="getStepClass('precheck')">
+        <div class="step-card" :class="getStepClass(1)">
           <div class="step-header">
             <div class="step-icon">1</div>
             <div class="step-info">
               <div class="step-title">Pre-check</div>
               <div class="step-desc">Validating environment</div>
             </div>
-            <div class="step-status">Done</div>
+            <div class="step-status">{{ getStepStatusLabel(1) }}</div>
           </div>
           <div class="step-content">
             <div class="check-grid">
-              <div class="check-item success"><span class="icon">✓</span> Disk Space (>5GB)</div>
-              <div class="check-item success"><span class="icon">✓</span> Git Installed</div>
-              <div class="check-item success"><span class="icon">✓</span> .NET SDK 8.0</div>
-              <div class="check-item success"><span class="icon">✓</span> Writable Directory</div>
+              <div class="check-item success"><span class="icon">✓</span> Environment Ready</div>
+              <div class="check-item success"><span class="icon">✓</span> Database Connection</div>
             </div>
           </div>
         </div>
 
-        <!-- 2. Git Clone / Pull -->
-        <div class="step-card" :class="getStepClass('source')">
+        <!-- 2. Source Code -->
+        <div class="step-card" :class="getStepClass(2)">
           <div class="step-header">
             <div class="step-icon">2</div>
             <div class="step-info">
               <div class="step-title">Source Code</div>
               <div class="step-desc">Fetching repositories</div>
             </div>
-            <div class="step-status">Done</div>
+            <div class="step-status">{{ getStepStatusLabel(2) }}</div>
           </div>
           <div class="step-content repo-list">
             <div class="repo-item">
               <div class="repo-header">
-                <span class="repo-badge dependency">Dependency</span>
-                <span class="repo-name">HRDesk.Shared</span>
-                <span class="repo-commit">#a1b2c3d</span>
-              </div>
-              <div class="progress-bar"><div class="progress-fill" style="width: 100%"></div></div>
-            </div>
-            <div class="repo-item">
-              <div class="repo-header">
                 <span class="repo-badge primary">Primary</span>
-                <span class="repo-name">HRDesk.Api</span>
-                <span class="repo-commit">#4f5e6d7</span>
+                <span class="repo-name">{{ app.name }}</span>
+                <span class="repo-commit">#{{ selectedHistory.commitHash?.substring(0, 7) || '...' }}</span>
               </div>
-              <div class="progress-bar"><div class="progress-fill" style="width: 100%"></div></div>
+              <div class="progress-bar"><div class="progress-fill" :style="{ width: getStepClass(2) === 'success' ? '100%' : '50%' }"></div></div>
             </div>
           </div>
         </div>
 
         <!-- 3. Build -->
-        <div class="step-card" :class="getStepClass('build')">
+        <div class="step-card" :class="getStepClass(3)">
           <div class="step-header">
             <div class="step-icon">3</div>
             <div class="step-info">
               <div class="step-title">Build & Publish</div>
-              <div class="step-desc">Runtime metadata & compilation</div>
+              <div class="step-desc">Compilation & bundling</div>
             </div>
-            <div class="step-status blinking">Running...</div>
+            <div class="step-status" :class="{ blinking: getStepClass(3) === 'active' }">
+              {{ getStepStatusLabel(3) }}
+            </div>
           </div>
           <div class="step-content">
-            <div class="build-meta">
-              <span><strong>Runtime:</strong> .NET 8.0</span>
-              <span><strong>Working Dir:</strong> /var/app/HRDesk.Api</span>
-            </div>
             <div class="terminal-mock">
-              <div>> dotnet clean</div>
-              <div>> dotnet restore HRDesk.Api.csproj</div>
-              <div>Restoring packages for /var/app/HRDesk.Api/HRDesk.Api.csproj...</div>
-              <div>> dotnet publish -c Release -o ./publish</div>
-              <div>Microsoft (R) Build Engine version 17.8.3</div>
-              <div>Compiling HRDesk.Shared...</div>
-              <div>Compiling HRDesk.Api...<span class="cursor">_</span></div>
+              <div v-for="(log, idx) in masterLogs" :key="idx" :class="log.level">
+                <span v-if="log.level === 'cmd'">$ </span>{{ log.message }}
+              </div>
+              <div v-if="getStepClass(3) === 'active'"><span class="cursor">_</span></div>
             </div>
           </div>
         </div>
 
         <!-- 4. Artifact Validation -->
-        <div class="step-card pending">
+        <div class="step-card" :class="getStepClass(4)">
           <div class="step-header">
             <div class="step-icon">4</div>
             <div class="step-info">
               <div class="step-title">Artifact Validation</div>
               <div class="step-desc">Verifying build outputs</div>
             </div>
-            <div class="step-status">Pending</div>
+            <div class="step-status">{{ getStepStatusLabel(4) }}</div>
           </div>
           <div class="step-content hidden-content">
             <ul class="artifact-checks">
-              <li>Checking output dir: <strong>./publish</strong></li>
-              <li>Validating binary: <strong>HRDesk.Api.dll</strong> exists</li>
-              <li>Size validation: <strong>~45MB</strong></li>
+              <li>Verifying output integrity...</li>
+              <li v-if="getStepClass(4) === 'success'">Validation passed.</li>
             </ul>
           </div>
         </div>
 
         <!-- 5. Deploy Targets -->
-        <div class="step-card pending">
+        <div class="step-card" :class="getStepClass(5)">
           <div class="step-header">
             <div class="step-icon">5</div>
             <div class="step-info">
               <div class="step-title">Deploy Targets</div>
-              <div class="step-desc">Matrix deployment to 3 servers</div>
+              <div class="step-desc">Deployment to servers</div>
             </div>
-            <div class="step-status">Pending</div>
+            <div class="step-status">{{ getStepStatusLabel(5) }}</div>
           </div>
           <div class="step-content hidden-content">
             <div class="server-matrix">
-              <!-- Server 1 -->
-              <div class="target-server">
+              <div v-for="server in targetServers" :key="server.id" class="target-server">
                 <div class="server-title">
-                  <span>Server Alpha (10.0.0.1)</span>
-                  <button class="btn btn-ghost btn-xs text-red">Rollback</button>
+                  <span>{{ server.name }} ({{ server.ip }})</span>
+                  <button 
+                    v-if="selectedHistory.status === 'success'" 
+                    class="btn btn-ghost btn-xs text-red"
+                    @click.stop="handleRollback"
+                  >Rollback</button>
                 </div>
                 <div class="sub-steps">
-                  <div class="sub-step pending">SSH</div>
-                  <div class="sub-step pending">Backup</div>
-                  <div class="sub-step pending">Upload</div>
-                  <div class="sub-step pending">Restart</div>
-                  <div class="sub-step pending">Health</div>
+                  <div class="sub-step" :class="getServerSubStepStatus(server.id, 'SSH')">SSH</div>
+                  <div class="sub-step" :class="getServerSubStepStatus(server.id, 'Upload')">Upload</div>
+                  <div class="sub-step" :class="getServerSubStepStatus(server.id, 'Restart')">Restart</div>
+                  <div class="sub-step" :class="getServerSubStepStatus(server.id, 'Health')">Health</div>
                 </div>
-                <div class="progress-bar mt-2"><div class="progress-fill" style="width: 0%"></div></div>
-              </div>
-              
-              <!-- Server 2 -->
-              <div class="target-server">
-                <div class="server-title">
-                  <span>Server Beta (10.0.0.2)</span>
-                  <button class="btn btn-ghost btn-xs text-red">Rollback</button>
+                <div class="progress-bar mt-2">
+                  <div class="progress-fill" :style="{ width: getServerProgress(server.id) + '%' }"></div>
                 </div>
-                <div class="sub-steps">
-                  <div class="sub-step pending">SSH</div>
-                  <div class="sub-step pending">Backup</div>
-                  <div class="sub-step pending">Upload</div>
-                  <div class="sub-step pending">Restart</div>
-                  <div class="sub-step pending">Health</div>
+                <div class="server-logs-mini mt-2" v-if="getServerLogs(server.id).length">
+                   <div v-for="(log, idx) in getServerLogs(server.id).slice(-3)" :key="idx" :class="log.level" class="mini-log">
+                     {{ log.message }}
+                   </div>
                 </div>
-                <div class="progress-bar mt-2"><div class="progress-fill" style="width: 0%"></div></div>
-              </div>
-
-              <!-- Server 3 -->
-              <div class="target-server">
-                <div class="server-title">
-                  <span>Server Gamma (10.0.0.3)</span>
-                  <button class="btn btn-ghost btn-xs text-red">Rollback</button>
-                </div>
-                <div class="sub-steps">
-                  <div class="sub-step pending">SSH</div>
-                  <div class="sub-step pending">Backup</div>
-                  <div class="sub-step pending">Upload</div>
-                  <div class="sub-step pending">Restart</div>
-                  <div class="sub-step pending">Health</div>
-                </div>
-                <div class="progress-bar mt-2"><div class="progress-fill" style="width: 0%"></div></div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- 6. Cleanup -->
-        <div class="step-card pending">
+        <div class="step-card" :class="getStepClass(6)">
           <div class="step-header">
             <div class="step-icon">6</div>
             <div class="step-info">
               <div class="step-title">Cleanup</div>
               <div class="step-desc">Removing temporary workspaces</div>
             </div>
-            <div class="step-status">Pending</div>
+            <div class="step-status">{{ getStepStatusLabel(6) }}</div>
           </div>
         </div>
 
         <!-- 7. Post-Deploy -->
-        <div class="step-card pending">
+        <div class="step-card" :class="getStepClass(7)">
           <div class="step-header">
             <div class="step-icon">7</div>
             <div class="step-info">
               <div class="step-title">Post-Deploy</div>
               <div class="step-desc">Logs & Notifications</div>
             </div>
-            <div class="step-status">Pending</div>
+            <div class="step-status">{{ getStepStatusLabel(7) }}</div>
           </div>
         </div>
 
@@ -220,33 +192,209 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 
 const props = defineProps({
   app: { type: Object, required: true }
 })
 
+const nuxtApp = useNuxtApp()
+const auth = useAuth()
+const history = ref([])
+const loading = ref(false)
 const selectedHistory = ref(null)
+const logs = ref([])
+const polling = ref(null)
 
-const mockHistory = ref([
-  { id: 1, version: 'v1.4.2', status: 'Running', time: 'Just now', commitHash: '4f5e6d7', author: 'Jane Doe' },
-  { id: 2, version: 'v1.4.1', status: 'Success', time: '2 hours ago', commitHash: 'b3a2c1d', author: 'John Smith' },
-  { id: 3, version: 'v1.4.0', status: 'Failed', time: 'Yesterday', commitHash: 'e9f8d7c', author: 'Jane Doe' },
-])
+const fetchHistory = async () => {
+  try {
+    loading.value = true
+    const data = await nuxtApp.$apiFetch(`/api/deploy/${props.app.id}/history`, {
+      headers: auth.authHeaders()
+    })
+    history.value = data
+  } catch (e) {
+    console.error('Failed to fetch history', e)
+  } finally {
+    loading.value = false
+  }
+}
 
-const getStepClass = (stepName) => {
-  if (selectedHistory.value?.status === 'Running') {
-    if (stepName === 'precheck' || stepName === 'source') return 'success'
-    if (stepName === 'build') return 'active'
+const fetchJobDetails = async (jobId) => {
+  try {
+    const jobLogs = await nuxtApp.$apiFetch(`/api/deploy/${props.app.id}/logs?jobId=${jobId}`, {
+      headers: auth.authHeaders()
+    })
+    logs.value = jobLogs
+
+    // Update the selectedHistory if it's currently running to refresh status
+    if (selectedHistory.value?.status === 'running') {
+      const statusData = await nuxtApp.$apiFetch(`/api/deploy/${props.app.id}/status`, {
+        headers: auth.authHeaders()
+      })
+      if (statusData && statusData.id === jobId) {
+        selectedHistory.value = statusData
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch job details', e)
+  }
+}
+
+const selectJob = (job) => {
+  selectedHistory.value = job
+  logs.value = []
+  fetchJobDetails(job.id)
+}
+
+const startPolling = () => {
+  if (polling.value) return
+  polling.value = setInterval(() => {
+    if (selectedHistory.value) {
+      fetchJobDetails(selectedHistory.value.id)
+    } else {
+      fetchHistory()
+    }
+  }, 3000)
+}
+
+const stopPolling = () => {
+  if (polling.value) {
+    clearInterval(polling.value)
+    polling.value = null
+  }
+}
+
+onMounted(() => {
+  fetchHistory()
+  startPolling()
+})
+
+onUnmounted(() => {
+  stopPolling()
+})
+
+// Logic to derive step status from logs and job state
+const masterLogs = computed(() => logs.value.filter(l => !l.serverId))
+const serverLogsGrouped = computed(() => {
+  const groups = {}
+  logs.value.filter(l => l.serverId).forEach(l => {
+    if (!groups[l.serverId]) groups[l.serverId] = []
+    groups[l.serverId].push(l)
+  })
+  return groups
+})
+
+const targetServers = computed(() => {
+  // If we had the actual servers used in the job, we'd use that.
+  // For now, we derive from logs and application targets.
+  const uniqueServerIdsInLogs = Object.keys(serverLogsGrouped.value)
+  // This is a bit of a fallback, ideally the API returns targets per job
+  return props.app.deployTargets || []
+})
+
+const getStepClass = (stepNum) => {
+  const status = selectedHistory.value?.status?.toLowerCase()
+  if (!selectedHistory.value) return 'pending'
+
+  // Map status to steps
+  if (status === 'success') return 'success'
+  if (status === 'failed') {
+    // Determine where it failed based on logs (simplified)
+    if (logs.value.some(l => l.level === 'error')) {
+      // If error exists in master logs before server logs, it's build phase (3)
+      const errorLog = logs.value.find(l => l.level === 'error')
+      if (!errorLog.serverId) return stepNum < 3 ? 'success' : (stepNum === 3 ? 'failed' : 'pending')
+      return stepNum < 5 ? 'success' : (stepNum === 5 ? 'failed' : 'pending')
+    }
+    return 'failed'
+  }
+
+  // Running logic
+  if (status === 'running' || status === 'queued') {
+    if (stepNum === 1) return 'success'
+    if (stepNum === 2) return 'success'
+    if (stepNum === 3) {
+      const hasDeployStarted = logs.value.some(l => l.serverId)
+      return hasDeployStarted ? 'success' : 'active'
+    }
+    if (stepNum === 4) {
+      const hasDeployStarted = logs.value.some(l => l.serverId)
+      return hasDeployStarted ? 'success' : 'pending'
+    }
+    if (stepNum === 5) {
+      const hasDeployStarted = logs.value.some(l => l.serverId)
+      const isFinished = status === 'success' || status === 'failed'
+      return isFinished ? 'success' : (hasDeployStarted ? 'active' : 'pending')
+    }
     return 'pending'
   }
   return 'pending'
+}
+
+const getStepStatusLabel = (stepNum) => {
+  const cls = getStepClass(stepNum)
+  if (cls === 'success') return 'Done'
+  if (cls === 'active') return 'Running...'
+  if (cls === 'failed') return 'Failed'
+  return 'Pending'
+}
+
+const getServerLogs = (serverId) => serverLogsGrouped.value[serverId] || []
+
+const getServerSubStepStatus = (serverId, stepName) => {
+  const sLogs = getServerLogs(serverId)
+  const msg = sLogs.map(l => l.message.toLowerCase()).join(' ')
+  
+  if (stepName === 'SSH' && msg.includes('ssh')) return 'success'
+  if (stepName === 'Upload' && msg.includes('upload complete')) return 'success'
+  if (stepName === 'Restart' && msg.includes('restart')) return 'success'
+  if (stepName === 'Health' && msg.includes('health check ok')) return 'success'
+  
+  // Active check
+  if (stepName === 'SSH' && sLogs.length > 0) return 'active'
+  if (stepName === 'Upload' && msg.includes('scp')) return 'active'
+  if (stepName === 'Restart' && msg.includes('systemctl')) return 'active'
+  
+  return 'pending'
+}
+
+const getServerProgress = (serverId) => {
+  const sLogs = getServerLogs(serverId)
+  if (sLogs.some(l => l.message.toLowerCase().includes('complete'))) return 100
+  if (sLogs.length === 0) return 0
+  return Math.min(sLogs.length * 20, 90)
+}
+
+const formatTime = (ts) => {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return d.toLocaleString()
+}
+
+const handleRollback = () => {
+  if (confirm('Trigger rollback for this job?')) {
+    nuxtApp.$apiFetch(`/api/deploy/${selectedHistory.value.id}/rollback`, { 
+      method: 'POST',
+      headers: auth.authHeaders()
+    })
+      .then(() => alert('Rollback triggered'))
+  }
 }
 </script>
 
 <style scoped>
 .deployment-history {
   height: 100%;
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--text3);
+  background: var(--bg2);
+  border-radius: 12px;
+  border: 1px dashed var(--border);
 }
 
 /* History List */
@@ -287,11 +435,12 @@ const getStepClass = (stepName) => {
   height: 8px;
   border-radius: 50%;
 }
-.history-status.running .status-indicator { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+.history-status.running .status-indicator,
+.history-status.queued .status-indicator { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
 .history-status.success .status-indicator { background: var(--success); }
 .history-status.failed .status-indicator { background: var(--danger); }
 
-.history-status.running { color: var(--warning); }
+.history-status.running, .history-status.queued { color: var(--warning); }
 .history-status.success { color: var(--success); }
 .history-status.failed { color: var(--danger); }
 
@@ -308,8 +457,11 @@ const getStepClass = (stepName) => {
 .history-meta {
   font-size: 12px;
   color: var(--text2);
-  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+.meta-sep { color: var(--border); }
 
 /* Pipeline View */
 .pipeline-view {
@@ -338,6 +490,17 @@ const getStepClass = (stepName) => {
   font-size: 12px;
   font-family: var(--mono);
 }
+.pipeline-status-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.pipeline-status-badge.success { background: rgba(0, 201, 167, 0.15); color: var(--success); }
+.pipeline-status-badge.failed { background: rgba(255, 71, 87, 0.15); color: var(--danger); }
+.pipeline-status-badge.running { background: rgba(255, 186, 0, 0.15); color: var(--warning); }
 
 .pipeline-steps {
   display: flex;
@@ -372,6 +535,9 @@ const getStepClass = (stepName) => {
 .step-card.success {
   border-color: var(--success);
 }
+.step-card.failed {
+  border-color: var(--danger);
+}
 .step-card.pending {
   opacity: 0.6;
 }
@@ -379,7 +545,8 @@ const getStepClass = (stepName) => {
   display: none;
 }
 .step-card.active .hidden-content,
-.step-card.success .hidden-content {
+.step-card.success .hidden-content,
+.step-card.failed .hidden-content {
   display: block;
 }
 
@@ -399,6 +566,7 @@ const getStepClass = (stepName) => {
   font-weight: 700;
   font-size: 14px;
   border: 2px solid var(--border);
+  flex-shrink: 0;
 }
 .step-card.active .step-icon {
   border-color: var(--accent);
@@ -407,6 +575,11 @@ const getStepClass = (stepName) => {
 .step-card.success .step-icon {
   background: var(--success);
   border-color: var(--success);
+  color: #fff;
+}
+.step-card.failed .step-icon {
+  background: var(--danger);
+  border-color: var(--danger);
   color: #fff;
 }
 .step-info {
@@ -428,6 +601,8 @@ const getStepClass = (stepName) => {
 }
 .step-card.active .step-status { color: var(--accent); }
 .step-card.success .step-status { color: var(--success); }
+.step-card.failed .step-status { color: var(--danger); }
+
 .blinking {
   animation: blink 1.5s infinite;
 }
@@ -438,56 +613,40 @@ const getStepClass = (stepName) => {
   padding-left: 52px;
 }
 
-/* Pre-check */
-.check-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
-}
-.check-item {
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg3);
-  padding: 6px 10px;
-  border-radius: 6px;
-}
-.check-item.success { color: var(--success); }
-.check-item .icon { font-weight: bold; }
-
-/* Source */
-.repo-list { display: flex; flex-direction: column; gap: 12px; }
-.repo-item { background: var(--bg3); padding: 10px; border-radius: 8px; }
-.repo-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; }
-.repo-badge { padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 10px; text-transform: uppercase; }
-.repo-badge.dependency { background: rgba(139, 127, 255, 0.15); color: var(--purple); }
-.repo-badge.primary { background: rgba(0, 201, 167, 0.12); color: var(--accent); }
-.repo-name { font-weight: 500; flex: 1; }
-.repo-commit { font-family: var(--mono); color: var(--text3); }
-.progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-.progress-fill { height: 100%; background: var(--accent); transition: width 0.3s ease; }
-
-/* Build */
-.build-meta {
-  display: flex;
-  gap: 16px;
-  font-size: 12px;
-  margin-bottom: 12px;
-  color: var(--text2);
-}
+/* Terminal & Logs */
 .terminal-mock {
-  background: #111;
-  color: #0f0;
+  background: #0c0c0c;
+  color: #e0e0e0;
   font-family: var(--mono);
   font-size: 11px;
   padding: 12px;
   border-radius: 8px;
-  line-height: 1.5;
-  height: 120px;
+  line-height: 1.6;
+  max-height: 250px;
   overflow-y: auto;
+  border: 1px solid #222;
 }
-.terminal-mock > div { margin-bottom: 4px; }
+.terminal-mock div.cmd { color: #5ccfe6; }
+.terminal-mock div.error { color: #ff3333; }
+.terminal-mock div.success { color: #bae67e; }
+.terminal-mock div.warn { color: #ffd580; }
+
+.mini-log { font-size: 10px; font-family: var(--mono); margin-top: 2px; opacity: 0.8; }
+.mini-log.error { color: var(--danger); }
+.mini-log.success { color: var(--success); }
+
+/* Deploy Targets */
+.server-matrix { display: flex; flex-direction: column; gap: 12px; }
+.target-server { background: var(--bg3); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
+.server-title { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.sub-steps { display: flex; gap: 8px; flex-wrap: wrap; }
+.sub-step { padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); color: var(--text3); font-size: 10px; font-weight: 600; transition: all 0.2s; }
+.sub-step.active { background: rgba(0, 201, 167, 0.1); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.sub-step.success { background: rgba(0, 201, 167, 0.15); color: var(--success); }
+
+.text-red { color: var(--danger); }
+.mt-2 { margin-top: 8px; }
+
 .cursor {
   display: inline-block;
   width: 8px;
@@ -495,29 +654,5 @@ const getStepClass = (stepName) => {
   background: currentColor;
   animation: blink 1s infinite;
   vertical-align: middle;
-  margin-left: 4px;
 }
-
-/* Validation */
-.artifact-checks {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  font-size: 12px;
-  color: var(--text2);
-}
-.artifact-checks li { margin-bottom: 6px; padding-left: 12px; position: relative; }
-.artifact-checks li::before { content: "•"; position: absolute; left: 0; color: var(--accent); }
-
-/* Deploy */
-.server-matrix { display: flex; flex-direction: column; gap: 12px; }
-.target-server { background: var(--bg3); padding: 10px; border-radius: 8px; }
-.server-title { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
-.sub-steps { display: flex; justify-content: space-between; font-size: 11px; }
-.sub-step { padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text3); }
-.sub-step.active { background: rgba(0, 201, 167, 0.12); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.sub-step.success { background: rgba(0, 201, 167, 0.12); color: var(--success); }
-.text-red { color: var(--danger); }
-.mt-2 { margin-top: 8px; }
-
 </style>

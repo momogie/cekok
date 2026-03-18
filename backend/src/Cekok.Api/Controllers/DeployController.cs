@@ -65,6 +65,10 @@ public static class DeployController
             int page, int size, DeployService svc, CancellationToken ct) =>
             Results.Ok(await svc.GetHistoryAsync(page, size < 1 ? 20 : size, ct)));
 
+        group.MapGet("/{appId}/history", async (
+            string appId, int page, int size, DeployService svc, CancellationToken ct) =>
+            Results.Ok(await svc.GetAppHistoryAsync(appId, page, size < 1 ? 20 : size, ct)));
+
         group.MapPost("/{jobId}/rollback", [Authorize(Roles = "admin,operator")] async (
             string jobId, CekokDbContext db, CancellationToken ct) =>
         {

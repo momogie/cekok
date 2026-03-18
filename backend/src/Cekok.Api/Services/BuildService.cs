@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Cekok.Api.Models;
@@ -9,7 +10,8 @@ namespace Cekok.Api.Services;
 
 public class BuildService(IConfiguration config, ILogger<BuildService> logger)
 {
-    private readonly string _buildDir = config["Cekok:BuildDir"] ?? "/tmp/cekok-builds";
+    private readonly string _buildDir = config["Cekok:BuildDir"] ?? 
+        (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Path.Combine(Path.GetTempPath(), "cekok-builds") : "/tmp/cekok-builds");
 
     public async Task<string> BuildAsync(Application app, string jobId,
         Action<string, string> logCallback, CancellationToken ct)
@@ -42,7 +44,14 @@ public class BuildService(IConfiguration config, ILogger<BuildService> logger)
         if (!string.IsNullOrEmpty(app.BuildCmd))
         {
             logCallback("cmd", $"$ {app.BuildCmd}");
-            await RunProcessAsync("/bin/sh", $"-c \"{app.BuildCmd}\"", repoDir, logCallback, ct);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                await RunProcessAsync("cmd.exe", $"/c \"{app.BuildCmd}\"", repoDir, logCallback, ct);
+            }
+            else
+            {
+                await RunProcessAsync("/bin/sh", $"-c \"{app.BuildCmd}\"", repoDir, logCallback, ct);
+            }
         }
 
         // [4] Validate output
