@@ -58,6 +58,7 @@ builder.Services.AddScoped<SystemAppService>();
 builder.Services.AddScoped<EncryptionService>();
 builder.Services.AddScoped<HealthCheckService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddHostedService<TelegramBotWorker>();
 
 builder.Services.AddHttpClient();
 

@@ -17,6 +17,7 @@ public class CekokDbContext(DbContextOptions<CekokDbContext> options) : DbContex
     public DbSet<NginxConfig> NginxConfigs => Set<NginxConfig>();
     public DbSet<AppSettingFile> AppSettingFiles => Set<AppSettingFile>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<TelegramSubscriber> TelegramSubscribers => Set<TelegramSubscriber>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

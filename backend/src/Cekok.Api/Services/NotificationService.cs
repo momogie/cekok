@@ -112,14 +112,41 @@ public class NotificationService(CekokDbContext db, EncryptionService enc, ILogg
         try
         {
             var token = await GetSetting("telegram_bot_token", true);
-            var defaultChatId = await GetSetting("telegram_admin_chat_id");
-            
-            var chatId = !string.IsNullOrEmpty(app.NotifyTelegramChatId) ? app.NotifyTelegramChatId : defaultChatId;
-            
-            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(chatId))
+            if (string.IsNullOrEmpty(token))
             {
-                logger.LogWarning("Telegram token or chat ID is not configured. Skipping Telegram.");
-                if (log != null) await log("warn", "Telegram not configured (token or chat id missing), skipping.");
+                logger.LogWarning("Telegram token is not configured. Skipping Telegram.");
+                if (log != null) await log("warn", "Telegram not configured (token missing), skipping.");
+                return;
+            }
+
+            // Get target chat IDs
+            var chatIds = new HashSet<string>();
+
+            // 1. Explicit chat ID from app settings
+            if (!string.IsNullOrEmpty(app.NotifyTelegramChatId))
+            {
+                chatIds.Add(app.NotifyTelegramChatId);
+            }
+
+            // 2. All active subscribers from bot
+            var subscribers = await db.TelegramSubscribers
+                .Where(s => s.IsActive)
+                .Select(s => s.ChatId)
+                .ToListAsync();
+            
+            foreach (var sid in subscribers) chatIds.Add(sid);
+
+            // 3. Fallback to default admin chat ID if no one else is configured
+            if (chatIds.Count == 0)
+            {
+                var defaultChatId = await GetSetting("telegram_admin_chat_id");
+                if (!string.IsNullOrEmpty(defaultChatId)) chatIds.Add(defaultChatId);
+            }
+
+            if (chatIds.Count == 0)
+            {
+                logger.LogWarning("Telegram chat ID is not configured and no subscribers found. Skipping Telegram.");
+                if (log != null) await log("warn", "Telegram not configured (chat id missing and no subscribers), skipping.");
                 return;
             }
 
@@ -133,22 +160,35 @@ public class NotificationService(CekokDbContext db, EncryptionService enc, ILogg
 
             using var http = new HttpClient();
             var url = $"https://api.telegram.org/bot{token}/sendMessage";
-            var resp = await http.PostAsJsonAsync(url, new {
-                chat_id = chatId,
-                text = message,
-                parse_mode = "Markdown"
-            });
             
-            if (!resp.IsSuccessStatusCode)
+            int sentCount = 0;
+            foreach (var chatId in chatIds)
             {
-                var error = await resp.Content.ReadAsStringAsync();
-                logger.LogWarning("Telegram API Error: {Error}", error);
-                if (log != null) await log("error", $"✗ Telegram API Error: {resp.StatusCode}");
+                var resp = await http.PostAsJsonAsync(url, new {
+                    chat_id = chatId,
+                    text = message,
+                    parse_mode = "Markdown"
+                });
+                
+                if (resp.IsSuccessStatusCode)
+                {
+                    sentCount++;
+                }
+                else
+                {
+                    var error = await resp.Content.ReadAsStringAsync();
+                    logger.LogWarning("Telegram API Error for {ChatId}: {Error}", chatId, error);
+                }
+            }
+
+            if (sentCount > 0)
+            {
+                logger.LogInformation("Telegram notification sent to {Count} recipients for app {AppName}", sentCount, app.Name);
+                if (log != null) await log("success", $"✓ Telegram notification sent to {sentCount} recipients");
             }
             else
             {
-                logger.LogInformation("Telegram notification sent for app {AppName} to {ChatId}", app.Name, chatId);
-                if (log != null) await log("success", "✓ Telegram notification sent");
+                if (log != null) await log("error", "✗ Failed to send Telegram notification to any recipients");
             }
         }
         catch (Exception ex)

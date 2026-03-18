@@ -151,6 +151,23 @@ public static class SystemController
             return Results.Ok();
         });
 
+        group.MapGet("/telegram/subscribers", [Authorize(Roles = "admin")] async (CekokDbContext db, CancellationToken ct) =>
+        {
+            var subs = await db.TelegramSubscribers.OrderByDescending(s => s.CreatedAt).ToListAsync(ct);
+            return Results.Ok(subs);
+        });
+
+        group.MapDelete("/telegram/subscribers/{chatId}", [Authorize(Roles = "admin")] async (string chatId, CekokDbContext db, CancellationToken ct) =>
+        {
+            var sub = await db.TelegramSubscribers.FirstOrDefaultAsync(s => s.ChatId == chatId, ct);
+            if (sub != null)
+            {
+                db.TelegramSubscribers.Remove(sub);
+                await db.SaveChangesAsync(ct);
+            }
+            return Results.NoContent();
+        });
+
         return group;
     }
 

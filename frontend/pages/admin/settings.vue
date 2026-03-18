@@ -108,6 +108,27 @@
               <input v-model="form.telegram_admin_chat_id" type="text" placeholder="-100123456789" />
               <span class="help-text">Where to send notifications</span>
             </div>
+            
+            <div class="subscribers-section">
+              <label>Active Subscribers</label>
+              <div v-if="subscribers.length === 0" class="empty-subs">
+                No active subscribers. Ask users to type <code>/subscribe</code> to the bot.
+              </div>
+              <div v-else class="subs-list">
+                <div v-for="sub in subscribers" :key="sub.chatId" class="sub-item" :class="{ inactive: !sub.isActive }">
+                  <div class="sub-info">
+                    <span class="sub-name">{{ sub.displayName || sub.username || 'Anonymous' }}</span>
+                    <span class="sub-id">ID: {{ sub.chatId }}</span>
+                  </div>
+                  <div class="sub-actions">
+                    <span v-if="!sub.isActive" class="status-badge">Inactive</span>
+                    <button class="btn-icon delete" @click="removeSubscriber(sub.chatId)" title="Remove">
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l10 10M3 13L13 3"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -122,6 +143,7 @@ const auth = useAuth()
 const config = useRuntimeConfig()
 const saving = ref(false)
 const activeTab = ref('notification')
+const subscribers = ref([])
 
 const form = ref({
   smtp_host: '',
@@ -135,6 +157,16 @@ const form = ref({
   telegram_admin_chat_id: ''
 })
 
+const fetchSubscribers = async () => {
+  try {
+    subscribers.value = await $fetch(`${config.public.apiBase}/api/system/telegram/subscribers`, {
+      headers: auth.authHeaders()
+    })
+  } catch (err) {
+    console.error('Failed to load subscribers', err)
+  }
+}
+
 onMounted(async () => {
   try {
     const res = await $fetch(`${config.public.apiBase}/api/system/settings`, {
@@ -146,10 +178,25 @@ onMounted(async () => {
         form.value[s.key] = s.value
       }
     })
+
+    await fetchSubscribers()
   } catch (err) {
     console.error('Failed to load settings', err)
   }
 })
+
+const removeSubscriber = async (chatId) => {
+  if (!confirm('Are you sure you want to remove this subscriber?')) return
+  try {
+    await $fetch(`${config.public.apiBase}/api/system/telegram/subscribers/${chatId}`, {
+      method: 'DELETE',
+      headers: auth.authHeaders()
+    })
+    await fetchSubscribers()
+  } catch (err) {
+    alert('Failed to remove subscriber')
+  }
+}
 
 const saveSettings = async () => {
   saving.value = true
@@ -239,6 +286,31 @@ input, select {
 input:focus, select:focus { border-color: var(--accent); }
 
 .help-text { font-size: 10px; color: var(--text3); font-style: italic; }
+
+.subscribers-section { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 20px; }
+.empty-subs { font-size: 11px; color: var(--text3); padding: 12px; background: rgba(0,0,0,0.1); border-radius: 6px; text-align: center; }
+.empty-subs code { background: var(--bg2); padding: 2px 4px; border-radius: 4px; color: var(--accent); }
+
+.subs-list { display: flex; flex-direction: column; gap: 8px; }
+.sub-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+}
+.sub-item.inactive { opacity: 0.6; }
+.sub-info { display: flex; flex-direction: column; gap: 2px; }
+.sub-name { font-size: 12px; font-weight: 500; color: var(--text1); }
+.sub-id { font-size: 10px; color: var(--text3); font-family: var(--font-mono); }
+
+.sub-actions { display: flex; align-items: center; gap: 10px; }
+.status-badge { font-size: 9px; padding: 2px 6px; background: var(--bg3); color: var(--text3); border-radius: 4px; text-transform: uppercase; }
+
+.btn-icon {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; border: 1px solid transparent; background: transparent; cursor: pointer;
+  color: var(--text3); transition: all 0.2s;
+}
+.btn-icon:hover { background: var(--bg3); color: var(--text1); }
+.btn-icon.delete:hover { border-color: rgba(255,100,100,0.3); color: #ff6b6b; }
 
 .btn {
   display: flex; align-items: center; gap: 8px;
