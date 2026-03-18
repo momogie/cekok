@@ -166,6 +166,29 @@
           </div>
         </div>
         </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Recent Deployments</div>
+          </div>
+          <div class="history-list-mini">
+            <div v-for="item in recentDeploys" :key="item.id" class="history-item-mini">
+              <div class="history-item-left">
+                <div class="status-dot" :class="item.status.toLowerCase()"></div>
+                <div class="history-item-info">
+                  <div class="history-item-app">{{ item.appName }}</div>
+                  <div class="history-item-meta">
+                    {{ item.triggeredBy }} • {{ formatTime(item.createdAt) }}
+                  </div>
+                </div>
+              </div>
+              <div class="history-item-status" :class="item.status.toLowerCase()">
+                {{ item.status }}
+              </div>
+            </div>
+            <div v-if="!recentDeploys.length" class="empty-history">No recent deployments.</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -188,6 +211,28 @@ const { data: serversData } = await useFetch('/api/servers', {
 })
 const servers = computed(() => serversData.value || [])
 
+const { data: historyData, refresh: refreshHistory } = await useFetch('/api/deploy/history?size=5', {
+  baseURL: config.public.apiBase,
+  headers: auth.authHeaders()
+})
+const history = computed(() => historyData.value || [])
+
+const recentDeploys = computed(() => {
+  return history.value.map(h => {
+    const app = apps.value.find(a => a.id === h.appId)
+    return {
+      ...h,
+      appName: app?.name || 'Unknown App'
+    }
+  })
+})
+
+const formatTime = (ts) => {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { day: '2-digit', month: 'short' })
+}
+
 const deploy = async (id) => {
   if (!confirm('Trigger deploy for this app?')) return
   try {
@@ -197,6 +242,7 @@ const deploy = async (id) => {
       headers: auth.authHeaders()
     })
     alert('Deploy triggered! Job ID: ' + res.id)
+    refreshHistory()
   } catch (e) {
     if (e.response?.status !== 401) {
       alert('Failed: ' + e.message)
@@ -415,4 +461,69 @@ onUnmounted(() => {
   border-radius: 3px;
 }
 .mt-1 { margin-top: 4px; }
+
+.history-list-mini {
+  display: flex;
+  flex-direction: column;
+}
+.history-item-mini {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+.history-item-mini:last-child {
+  border-bottom: none;
+}
+.history-item-mini:hover {
+  background: var(--bg2);
+}
+.history-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.success { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.status-dot.failed { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.status-dot.running, .status-dot.queued { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+
+.history-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.history-item-app {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text1);
+}
+.history-item-meta {
+  font-size: 11px;
+  color: var(--text3);
+}
+.history-item-status {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.history-item-status.success { color: var(--success); }
+.history-item-status.failed { color: var(--danger); }
+.history-item-status.running, .history-item-status.queued { color: var(--warn); }
+
+.empty-history {
+  padding: 20px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 13px;
+}
 </style>
