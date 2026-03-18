@@ -45,14 +45,17 @@
         <!-- 1. Pre-check -->
         <div class="step-card" :class="getStepClass(1)">
           <div class="step-header">
-            <div class="step-icon">1</div>
+            <div class="step-icon">
+              <span v-if="getStepClass(1) === 'success'">✓</span>
+              <span v-else>1</span>
+            </div>
             <div class="step-info">
               <div class="step-title">Pre-check</div>
-              <div class="step-desc">Validating environment</div>
+              <div class="step-desc" v-if="getStepClass(1) !== 'success'">Validating environment</div>
             </div>
             <div class="step-status">{{ getStepStatusLabel(1) }}</div>
           </div>
-          <div class="step-content">
+          <div class="step-content hidden-content">
             <div class="check-grid">
               <div class="check-item success"><span class="icon">✓</span> Environment Ready</div>
               <div class="check-item success"><span class="icon">✓</span> Database Connection</div>
@@ -63,14 +66,17 @@
         <!-- 2. Source Code -->
         <div class="step-card" :class="getStepClass(2)">
           <div class="step-header">
-            <div class="step-icon">2</div>
+            <div class="step-icon">
+              <span v-if="getStepClass(2) === 'success'">✓</span>
+              <span v-else>2</span>
+            </div>
             <div class="step-info">
               <div class="step-title">Source Code</div>
-              <div class="step-desc">Fetching repositories</div>
+              <div class="step-desc" v-if="getStepClass(2) !== 'success'">Fetching repositories</div>
             </div>
             <div class="step-status">{{ getStepStatusLabel(2) }}</div>
           </div>
-          <div class="step-content repo-list">
+          <div class="step-content hidden-content repo-list">
             <div class="repo-item">
               <div class="repo-header">
                 <span class="repo-badge primary">Primary</span>
@@ -85,17 +91,20 @@
         <!-- 3. Build -->
         <div class="step-card" :class="getStepClass(3)">
           <div class="step-header">
-            <div class="step-icon">3</div>
+            <div class="step-icon">
+              <span v-if="getStepClass(3) === 'success'">✓</span>
+              <span v-else>3</span>
+            </div>
             <div class="step-info">
               <div class="step-title">Build & Publish</div>
-              <div class="step-desc">Compilation & bundling</div>
+              <div class="step-desc" v-if="getStepClass(3) !== 'success'">Compilation & bundling</div>
             </div>
             <div class="step-status" :class="{ blinking: getStepClass(3) === 'active' }">
               {{ getStepStatusLabel(3) }}
             </div>
           </div>
-          <div class="step-content">
-            <div class="terminal-mock">
+          <div class="step-content hidden-content">
+            <div class="terminal-mock" ref="terminalRef">
               <div v-for="(log, idx) in masterLogs" :key="idx" :class="log.level">
                 <span v-if="log.level === 'cmd'">$ </span>{{ log.message }}
               </div>
@@ -107,10 +116,13 @@
         <!-- 4. Artifact Validation -->
         <div class="step-card" :class="getStepClass(4)">
           <div class="step-header">
-            <div class="step-icon">4</div>
+            <div class="step-icon">
+              <span v-if="getStepClass(4) === 'success'">✓</span>
+              <span v-else>4</span>
+            </div>
             <div class="step-info">
               <div class="step-title">Artifact Validation</div>
-              <div class="step-desc">Verifying build outputs</div>
+              <div class="step-desc" v-if="getStepClass(4) !== 'success'">Verifying build outputs</div>
             </div>
             <div class="step-status">{{ getStepStatusLabel(4) }}</div>
           </div>
@@ -125,10 +137,13 @@
         <!-- 5. Deploy Targets -->
         <div class="step-card" :class="getStepClass(5)">
           <div class="step-header">
-            <div class="step-icon">5</div>
+            <div class="step-icon">
+              <span v-if="getStepClass(5) === 'success'">✓</span>
+              <span v-else>5</span>
+            </div>
             <div class="step-info">
               <div class="step-title">Deploy Targets</div>
-              <div class="step-desc">Deployment to servers</div>
+              <div class="step-desc" v-if="getStepClass(5) !== 'success'">Deployment to servers</div>
             </div>
             <div class="step-status">{{ getStepStatusLabel(5) }}</div>
           </div>
@@ -149,13 +164,9 @@
                   <div class="sub-step" :class="getServerSubStepStatus(server.id, 'Restart')">Restart</div>
                   <div class="sub-step" :class="getServerSubStepStatus(server.id, 'Health')">Health</div>
                 </div>
-                <div class="progress-bar mt-2">
+                <!-- Mini Progress -->
+                <div class="progress-bar mt-1" style="height: 3px;">
                   <div class="progress-fill" :style="{ width: getServerProgress(server.id) + '%' }"></div>
-                </div>
-                <div class="server-logs-mini mt-2" v-if="getServerLogs(server.id).length">
-                   <div v-for="(log, idx) in getServerLogs(server.id).slice(-3)" :key="idx" :class="log.level" class="mini-log">
-                     {{ log.message }}
-                   </div>
                 </div>
               </div>
             </div>
@@ -165,10 +176,12 @@
         <!-- 6. Cleanup -->
         <div class="step-card" :class="getStepClass(6)">
           <div class="step-header">
-            <div class="step-icon">6</div>
+            <div class="step-icon">
+              <span v-if="getStepClass(6) === 'success'">✓</span>
+              <span v-else>6</span>
+            </div>
             <div class="step-info">
               <div class="step-title">Cleanup</div>
-              <div class="step-desc">Removing temporary workspaces</div>
             </div>
             <div class="step-status">{{ getStepStatusLabel(6) }}</div>
           </div>
@@ -177,10 +190,12 @@
         <!-- 7. Post-Deploy -->
         <div class="step-card" :class="getStepClass(7)">
           <div class="step-header">
-            <div class="step-icon">7</div>
+            <div class="step-icon">
+              <span v-if="getStepClass(7) === 'success'">✓</span>
+              <span v-else>7</span>
+            </div>
             <div class="step-info">
               <div class="step-title">Post-Deploy</div>
-              <div class="step-desc">Logs & Notifications</div>
             </div>
             <div class="step-status">{{ getStepStatusLabel(7) }}</div>
           </div>
@@ -192,7 +207,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 
 const props = defineProps({
   app: { type: Object, required: true }
@@ -205,6 +220,7 @@ const loading = ref(false)
 const selectedHistory = ref(null)
 const logs = ref([])
 const polling = ref(null)
+const terminalRef = ref(null)
 
 const fetchHistory = async () => {
   try {
@@ -284,6 +300,14 @@ const serverLogsGrouped = computed(() => {
   })
   return groups
 })
+
+watch(masterLogs, () => {
+  nextTick(() => {
+    if (terminalRef.value) {
+      terminalRef.value.scrollTop = terminalRef.value.scrollHeight
+    }
+  })
+}, { deep: true })
 
 const targetServers = computed(() => {
   // If we had the actual servers used in the job, we'd use that.
@@ -401,13 +425,13 @@ const handleRollback = () => {
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 .history-card {
   background: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 10px 14px;
   cursor: pointer;
   transition: all var(--transition);
 }
@@ -419,14 +443,14 @@ const handleRollback = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .history-status {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -445,17 +469,17 @@ const handleRollback = () => {
 .history-status.failed { color: var(--danger); }
 
 .history-time {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text3);
 }
 .history-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text1);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .history-meta {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text2);
   display: flex;
   align-items: center;
@@ -467,36 +491,36 @@ const handleRollback = () => {
 .pipeline-view {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 .pipeline-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 .pipeline-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .version-badge {
-  background: rgba(0, 201, 167, 0.12);
+  background: rgba(0, 201, 167, 0.1);
   color: var(--accent);
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
   font-family: var(--mono);
 }
 .pipeline-status-badge {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  padding: 4px 10px;
-  border-radius: 20px;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 .pipeline-status-badge.success { background: rgba(0, 201, 167, 0.15); color: var(--success); }
 .pipeline-status-badge.failed { background: rgba(255, 71, 87, 0.15); color: var(--danger); }
@@ -505,16 +529,16 @@ const handleRollback = () => {
 .pipeline-steps {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   position: relative;
 }
 .pipeline-steps::before {
   content: '';
   position: absolute;
-  left: 20px;
+  left: 14px;
   top: 10px;
   bottom: 10px;
-  width: 2px;
+  width: 1px;
   background: var(--border);
   z-index: 0;
 }
@@ -522,55 +546,62 @@ const handleRollback = () => {
 .step-card {
   background: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 8px 12px;
   position: relative;
   z-index: 1;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 .step-card.active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  background: var(--bg3);
 }
 .step-card.success {
-  border-color: var(--success);
+  border-color: var(--border); /* Less prominent border for success */
+  background: var(--bg1);
+  opacity: 0.9;
 }
 .step-card.failed {
   border-color: var(--danger);
+  background: rgba(255, 71, 87, 0.05);
 }
 .step-card.pending {
-  opacity: 0.6;
+  opacity: 0.5;
 }
 .hidden-content {
   display: none;
 }
 .step-card.active .hidden-content,
-.step-card.success .hidden-content,
 .step-card.failed .hidden-content {
   display: block;
+}
+/* For success, we keep content hidden unless explicitly styled otherwise */
+.step-card.success .hidden-content {
+  display: none;
 }
 
 .step-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 .step-icon {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--bg3);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 14px;
-  border: 2px solid var(--border);
+  font-size: 11px;
+  border: 1.5px solid var(--border);
   flex-shrink: 0;
 }
 .step-card.active .step-icon {
   border-color: var(--accent);
   color: var(--accent);
+  background: rgba(0, 201, 167, 0.1);
 }
 .step-card.success .step-icon {
   background: var(--success);
@@ -584,17 +615,21 @@ const handleRollback = () => {
 }
 .step-info {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .step-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 .step-desc {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text3);
+  opacity: 0.8;
 }
 .step-status {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text3);
@@ -609,22 +644,22 @@ const handleRollback = () => {
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 .step-content {
-  margin-top: 16px;
-  padding-left: 52px;
+  margin-top: 8px;
+  padding-left: 38px;
 }
 
 /* Terminal & Logs */
 .terminal-mock {
-  background: #0c0c0c;
-  color: #e0e0e0;
+  background: #080808;
+  color: #d0d0d0;
   font-family: var(--mono);
-  font-size: 11px;
-  padding: 12px;
-  border-radius: 8px;
-  line-height: 1.6;
-  max-height: 250px;
+  font-size: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  line-height: 1.5;
+  max-height: 150px;
   overflow-y: auto;
-  border: 1px solid #222;
+  border: 1px solid #1a1a1a;
 }
 .terminal-mock div.cmd { color: #5ccfe6; }
 .terminal-mock div.error { color: #ff3333; }
@@ -636,15 +671,16 @@ const handleRollback = () => {
 .mini-log.success { color: var(--success); }
 
 /* Deploy Targets */
-.server-matrix { display: flex; flex-direction: column; gap: 12px; }
-.target-server { background: var(--bg3); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
-.server-title { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
-.sub-steps { display: flex; gap: 8px; flex-wrap: wrap; }
-.sub-step { padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); color: var(--text3); font-size: 10px; font-weight: 600; transition: all 0.2s; }
+.server-matrix { display: flex; flex-direction: column; gap: 8px; }
+.target-server { background: var(--bg3); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); }
+.server-title { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.sub-steps { display: flex; gap: 6px; flex-wrap: wrap; }
+.sub-step { padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text3); font-size: 9px; font-weight: 600; transition: all 0.2s; }
 .sub-step.active { background: rgba(0, 201, 167, 0.1); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .sub-step.success { background: rgba(0, 201, 167, 0.15); color: var(--success); }
 
 .text-red { color: var(--danger); }
+.mt-1 { margin-top: 4px; }
 .mt-2 { margin-top: 8px; }
 
 .cursor {

@@ -129,6 +129,8 @@ api.MapGroup("/deploy").MapDeployEndpoints().RequireAuthorization();
 api.MapGroup("/nginx").MapNginxEndpoints().RequireAuthorization();
 // System Apps endpoints
 api.MapGroup("/system-apps").MapSystemAppsEndpoints().RequireAuthorization();
+// System env endpoints
+api.MapGroup("/system").MapSystemEndpoints().RequireAuthorization();
 // Schedule endpoints
 api.MapGroup("/schedule").MapScheduleEndpoints().RequireAuthorization();
 

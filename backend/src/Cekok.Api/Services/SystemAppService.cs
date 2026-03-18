@@ -62,6 +62,16 @@ public class SystemAppService(CekokDbContext db, SshService sshSvc, EncryptionSe
             statuses["node"] = !string.IsNullOrWhiteSpace(trimmed) && char.IsDigit(trimmed[0]) ? "active" : "inactive";
         } catch { statuses["node"] = "inactive"; }
 
+        // Git
+        try {
+            var gitRes = await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, pw, "git --version", ct);
+            statuses["git"] = gitRes.Contains("git version") ? "active" : "inactive";
+        } catch { statuses["git"] = "inactive"; }
+
+        // SSH (is implicitly active if we connected to run these commands)
+        statuses["ssh"] = "active";
+
+
         return statuses;
     }
 
