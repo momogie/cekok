@@ -1,6 +1,7 @@
 using Cekok.Api.Data;
 using Cekok.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.CompilerServices;
 
 namespace Cekok.Api.Services;
 
@@ -47,7 +48,7 @@ public class SystemAppService(CekokDbContext db, SshService sshSvc, EncryptionSe
         return statuses;
     }
 
-    public async Task<(string Output, string Error, int ExitStatus)> InstallAsync(string serverId, string appId, CancellationToken ct)
+    public async IAsyncEnumerable<string> InstallStreamAsync(string serverId, string appId, [EnumeratorCancellation] CancellationToken ct)
     {
         var server = await db.Servers.FindAsync([serverId], ct)
             ?? throw new KeyNotFoundException("Server not found");
@@ -64,19 +65,58 @@ public class SystemAppService(CekokDbContext db, SshService sshSvc, EncryptionSe
             _ => throw new ArgumentException("Invalid App ID")
         };
 
-        var result = await sshSvc.RunCommandDetailedAsync(server.Ip, server.SshPort, server.SshUser, pw, command, ct);
+        using var client = new Renci.SshNet.SshClient(server.Ip, server.SshPort, server.SshUser, pw);
+        await Task.Run(() => client.Connect(), ct);
 
-        if (result.ExitStatus == 0)
+        using var cmd = client.CreateCommand(command);
+        var result = cmd.BeginExecute();
+
+        using var reader = new StreamReader(cmd.OutputStream);
+        using var errorReader = new StreamReader(cmd.ExtendedOutputStream);
+
+        int exitStatus = -1;
+        while (!result.IsCompleted || !reader.EndOfStream || !errorReader.EndOfStream)
+        {
+            if (ct.IsCancellationRequested) break;
+
+            bool hadOutput = false;
+
+            if (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                if (line != null) { yield return line; hadOutput = true; }
+            }
+
+            if (!errorReader.EndOfStream)
+            {
+                var line = await errorReader.ReadLineAsync();
+                if (line != null) { yield return "ERROR: " + line; hadOutput = true; }
+            }
+
+            if (!hadOutput && !result.IsCompleted)
+            {
+                await Task.Delay(50, ct);
+            }
+
+            if (result.IsCompleted && reader.EndOfStream && errorReader.EndOfStream)
+            {
+                exitStatus = cmd.ExitStatus ?? -1;
+                break;
+            }
+        }
+
+        client.Disconnect();
+        
+        yield return $"\n[EXIT_STATUS]: {exitStatus}";
+        
+        if (exitStatus == 0)
         {
             if (appId.ToLower() == "nginx")
             {
                 server.NginxInstalled = true;
                 await db.SaveChangesAsync(ct);
             }
-            // Optional: add more flags to Server model if updated in future
         }
-
-        return result;
     }
 }
 

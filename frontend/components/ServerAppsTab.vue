@@ -37,7 +37,7 @@
             <span>Result: {{ appLastResults[app.id].exitStatus === 0 ? 'Success' : 'Failed' }}</span>
             <button class="btn-close" @click="clearResult(app.id)">&times;</button>
           </div>
-          <div class="res-box-body">
+          <div class="res-box-body" ref="logContainer">
             <div v-if="appLastResults[app.id].message" class="res-msg" :class="{ err: !appLastResults[app.id].success }">{{ appLastResults[app.id].message }}</div>
             <pre v-if="appLastResults[app.id].output" class="res-pre">{{ appLastResults[app.id].output }}</pre>
             <pre v-if="appLastResults[app.id].error" class="res-pre err">{{ appLastResults[app.id].error }}</pre>
@@ -59,6 +59,8 @@ const props = defineProps({
 
 const emit = defineEmits(['install', 'clearResult'])
 
+const logContainer = ref(null)
+
 const installSystemApp = (appId) => {
   emit('install', appId)
 }
@@ -66,6 +68,14 @@ const installSystemApp = (appId) => {
 const clearResult = (appId) => {
   emit('clearResult', appId)
 }
+
+watch(() => props.appLastResults, () => {
+  nextTick(() => {
+    if (logContainer.value) {
+      logContainer.value.scrollTop = logContainer.value.scrollHeight
+    }
+  })
+}, { deep: true })
 </script>
 
 <style scoped>

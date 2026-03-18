@@ -18,16 +18,14 @@ public static class SystemAppsController
         });
 
         group.MapPost("/{serverId}/install/{appId}", [Authorize(Roles = "admin")] async (
-            string serverId, string appId, SystemAppService svc, CancellationToken ct) =>
+            string serverId, string appId, SystemAppService svc, HttpContext context, CancellationToken ct) =>
         {
-            var res = await svc.InstallAsync(serverId, appId, ct);
-            return Results.Ok(new { 
-                success = res.ExitStatus == 0,
-                message = res.ExitStatus == 0 ? $"{appId} installed successfully" : $"{appId} installation failed",
-                output = res.Output,
-                error = res.Error,
-                exitStatus = res.ExitStatus
-            });
+            context.Response.ContentType = "text/plain";
+            await foreach (var line in svc.InstallStreamAsync(serverId, appId, ct))
+            {
+                await context.Response.WriteAsync(line + "\n", ct);
+                await context.Response.Body.FlushAsync(ct);
+            }
         });
 
         return group;

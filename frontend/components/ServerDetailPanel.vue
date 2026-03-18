@@ -154,23 +154,50 @@ const fetchSystemApps = async () => {
 const installSystemApp = async (appId) => {
   if (installing.value[appId]) return
   installing.value[appId] = true
-  appLastResults.value[appId] = null
+  appLastResults.value[appId] = { success: true, message: `Starting ${appId} installation...`, output: '', exitStatus: 0 }
+  
   try {
-    const res = await nuxtApp.$apiFetch(`/api/system-apps/${props.srv.id}/install/${appId}`, {
+    const response = await fetch(`${config.public.apiBase}/api/system-apps/${props.srv.id}/install/${appId}`, {
       method: 'POST',
-      baseURL: config.public.apiBase,
-      headers: auth.authHeaders()
+      headers: {
+        ...auth.authHeaders()
+      }
     })
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
     
-    appLastResults.value[appId] = res
-    if (res.success) {
-      setTimeout(fetchSystemApps, 2000)
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      
+      const chunk = decoder.decode(value, { stream: true })
+      appLastResults.value[appId].output += chunk
     }
+    
+    // Parse exit status from the end of the output
+    const output = appLastResults.value[appId].output
+    const marker = '\n[EXIT_STATUS]: '
+    const markerIndex = output.lastIndexOf(marker)
+    if (markerIndex !== -1) {
+      const exitStatusStr = output.substring(markerIndex + marker.length).trim()
+      const exitStatus = parseInt(exitStatusStr)
+      appLastResults.value[appId].exitStatus = exitStatus
+      appLastResults.value[appId].success = exitStatus === 0
+      appLastResults.value[appId].output = output.substring(0, markerIndex)
+    }
+    
+    appLastResults.value[appId].message = appLastResults.value[appId].success 
+      ? `${appId} installation completed` 
+      : `${appId} installation failed`
+    setTimeout(fetchSystemApps, 2000)
   } catch (e) {
     console.error(e)
     appLastResults.value[appId] = { 
       success: false, 
-      message: `Failed to trigger ${appId} installation`, 
+      message: `Failed during ${appId} installation`, 
       error: e.message,
       exitStatus: -1
     }

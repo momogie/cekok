@@ -25,7 +25,7 @@ public class NginxService(CekokDbContext db, SshService sshSvc, EncryptionServic
         var sudoPrefix = server.SshUser == "root" ? "" : $"echo '{pw.Replace("'", "'\\''")}' | sudo -S ";
         
         await sshSvc.RunCommandAsync(server.Ip, server.SshPort, server.SshUser, pw,
-            $"{sudoPrefix}apt-get update -qq && {sudoPrefix}apt-get install -y nginx && {sudoPrefix}systemctl enable nginx", ct);
+            $"{sudoPrefix}bash -c 'apt-get update -qq || true; apt-get install -y nginx && systemctl enable nginx'", ct);
         server.NginxInstalled = true;
         await db.SaveChangesAsync(ct);
     }
