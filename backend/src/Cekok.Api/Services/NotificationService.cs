@@ -8,16 +8,28 @@ namespace Cekok.Api.Services;
 
 public class NotificationService(CekokDbContext db, EncryptionService enc, ILogger<NotificationService> logger)
 {
-    public async Task SendDeploymentNotificationAsync(Application app, DeployJob job)
+    public async Task SendDeploymentNotificationAsync(Application app, DeployJob job, Func<string, string, Task>? log = null)
     {
+        if (log != null) await log("info", $"Checking notifications for {app.Name} (Email: {app.NotifyEmail}, Telegram: {app.NotifyTelegram})...");
+
+        bool sentAny = false;
         if (app.NotifyEmail && !string.IsNullOrEmpty(app.NotifyEmailAddress))
         {
-            await SendEmailAsync(app, job);
+            if (log != null) await log("info", $"Sending email notification to {app.NotifyEmailAddress}...");
+            await SendEmailAsync(app, job, log);
+            sentAny = true;
         }
 
         if (app.NotifyTelegram)
         {
-            await SendTelegramAsync(app, job);
+            if (log != null) await log("info", "Sending telegram notification...");
+            await SendTelegramAsync(app, job, log);
+            sentAny = true;
+        }
+
+        if (!sentAny && log != null)
+        {
+            await log("info", "No notifications were enabled or configured for this app.");
         }
     }
 
@@ -43,19 +55,20 @@ public class NotificationService(CekokDbContext db, EncryptionService enc, ILogg
         }
     }
 
-    private async Task SendEmailAsync(Application app, DeployJob job)
+    private async Task SendEmailAsync(Application app, DeployJob job, Func<string, string, Task>? log = null)
     {
         try
         {
             var host = await GetSetting("smtp_host");
             var portStr = await GetSetting("smtp_port");
-            var user = await GetSetting("smtp_user");
-            var pass = await GetSetting("smtp_pass", true);
-            var from = await GetSetting("smtp_from");
+            var user = await GetSetting("smtp_username");
+            var pass = await GetSetting("smtp_password", true);
+            var from = await GetSetting("smtp_from_email");
 
             if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(from))
             {
                 logger.LogWarning("SMTP host or from address is not configured. Skipping email.");
+                if (log != null) await log("warn", "SMTP not configured (host or from missing), skipping email.");
                 return;
             }
 
@@ -85,25 +98,28 @@ public class NotificationService(CekokDbContext db, EncryptionService enc, ILogg
             var mail = new MailMessage(from, app.NotifyEmailAddress!, subject, body);
             await smtp.SendMailAsync(mail);
             logger.LogInformation("Email notification sent for app {AppName} to {Email}", app.Name, app.NotifyEmailAddress);
+            if (log != null) await log("success", "✓ Email notification sent");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send email notification for app {AppName}", app.Name);
+            if (log != null) await log("error", $"✗ Failed to send email: {ex.Message}");
         }
     }
 
-    private async Task SendTelegramAsync(Application app, DeployJob job)
+    private async Task SendTelegramAsync(Application app, DeployJob job, Func<string, string, Task>? log = null)
     {
         try
         {
             var token = await GetSetting("telegram_bot_token", true);
-            var defaultChatId = await GetSetting("telegram_chat_id");
+            var defaultChatId = await GetSetting("telegram_admin_chat_id");
             
             var chatId = !string.IsNullOrEmpty(app.NotifyTelegramChatId) ? app.NotifyTelegramChatId : defaultChatId;
             
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(chatId))
             {
                 logger.LogWarning("Telegram token or chat ID is not configured. Skipping Telegram.");
+                if (log != null) await log("warn", "Telegram not configured (token or chat id missing), skipping.");
                 return;
             }
 
@@ -127,15 +143,18 @@ public class NotificationService(CekokDbContext db, EncryptionService enc, ILogg
             {
                 var error = await resp.Content.ReadAsStringAsync();
                 logger.LogWarning("Telegram API Error: {Error}", error);
+                if (log != null) await log("error", $"✗ Telegram API Error: {resp.StatusCode}");
             }
             else
             {
                 logger.LogInformation("Telegram notification sent for app {AppName} to {ChatId}", app.Name, chatId);
+                if (log != null) await log("success", "✓ Telegram notification sent");
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send telegram notification for app {AppName}", app.Name);
+            if (log != null) await log("error", $"✗ Failed to send telegram: {ex.Message}");
         }
     }
 

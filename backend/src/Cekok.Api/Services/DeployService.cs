@@ -129,9 +129,6 @@ public class DeployService(
             {
                 await DeployToTargetInternalAsync(scopeDb, scopeSsh, scopeScp, scopeHealth, scopeEnc, job, app, target, outputPath, zipFile, Log, ct);
             }
-
-            var allSuccess = targets.All(t => t.Status == "success");
-            job.Status = allSuccess ? "success" : "failed";
         }
         catch (Exception ex)
         {
@@ -141,13 +138,20 @@ public class DeployService(
         }
         finally
         {
-            if (job != null)
+            if (job != null && app != null)
             {
+                // [7] Notification - Send while still in 'running' state (if not already set to failed)
+                // If it's failed, it stays failed. If it's running, we'll set it at the end of this block.
+                await scopeNotify.SendDeploymentNotificationAsync(app, job, (level, msg) => Log(null, level, msg));
+
+                if (job.Status == "running")
+                {
+                    var allSuccess = targets.All(t => t.Status == "success");
+                    job.Status = allSuccess ? "success" : "failed";
+                }
+                
                 job.FinishedAt = DateTime.UtcNow.ToString("O");
                 await scopeDb.SaveChangesAsync(ct);
-
-                // [7] Notification
-                _ = scopeNotify.SendDeploymentNotificationAsync(app, job);
             }
 
             // [6] Cleanup

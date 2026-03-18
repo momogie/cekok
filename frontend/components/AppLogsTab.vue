@@ -55,13 +55,15 @@ const scrollToBottom = () => {
 const startPolling = () => {
   if (pollTimer.value) return
   pollTimer.value = setInterval(async () => {
-    if (isLive.value) {
-      await appsCtx.fetchLogs(props.appId, props.jobId)
-    } else if (pollTimer.value) {
+    // We only poll while live, but we want one final poll when it stops
+    const currentlyLive = isLive.value
+    await appsCtx.fetchLogs(props.appId, props.jobId)
+    
+    if (!currentlyLive && pollTimer.value) {
       clearInterval(pollTimer.value)
       pollTimer.value = null
     }
-  }, 1000) // Fast 1s polling for "realtime" feel
+  }, 1000)
 }
 
 const stopPolling = () => {
@@ -86,7 +88,6 @@ watch(() => displayLogs.value.length, () => {
 
 watch(isLive, (val) => {
   if (val) startPolling()
-  else stopPolling()
 })
 
 const formatTimestamp = (ts) => {
