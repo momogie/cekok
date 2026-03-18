@@ -1,6 +1,6 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('close')">
-    <div class="modal">
+  <div class="modal-overlay" @mousedown.self="onOverlayDown = true" @mouseup.self="onOverlayUp">
+    <div class="modal" @mousedown.stop>
       <div class="modal-header">
         <div class="modal-header-icon" :class="app ? 'icon-edit' : 'icon-add'">
           <svg v-if="app" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2"><path d="M11 2a2 2 0 1 1 3 3L6 13l-4 1 1-4 8-8z"/></svg>
@@ -39,11 +39,11 @@
           <div class="success-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-9" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
-          <div class="success-title">{{ form.name }} added!</div>
-          <div class="success-sub">App registered as <code style="color:var(--accent2);font-family:var(--mono)">{{ form.serviceName || 'service' }}</code>. First deploy will start shortly.</div>
+          <div class="success-title">{{ form.name }} {{ app ? 'Updated' : 'Created' }}!</div>
+          <div class="success-sub">App registered as <code style="color:var(--accent2);font-family:var(--mono)">{{ form.serviceName || 'service' }}</code>.</div>
           <div style="display:flex;gap:10px;margin-top:8px">
             <button class="btn btn-primary" @click="$emit('close')">Go to dashboard</button>
-            <button class="btn btn-ghost" @click="resetForm">Add another</button>
+            <button v-if="!app" class="btn btn-ghost" @click="resetForm">Add another</button>
           </div>
         </div>
 
@@ -94,6 +94,13 @@ const success = ref(false)
 const currentStep = ref(1)
 const totalSteps = 6
 
+// Overlay interactions to prevent closing when dragging selection out
+const onOverlayDown = ref(false)
+const onOverlayUp = () => {
+  if (onOverlayDown.value) emit('close')
+  onOverlayDown.value = false
+}
+
 const APP_TYPES = [
   { id:'dotnet', icon:'.NT', cls:'icon-dotnet', name:'.NET / C#',   desc:'ASP.NET Core API, Worker, Blazor',    buildCmd:'dotnet publish -c Release -o ./publish', outputDir:'publish/' },
   { id:'nuxt',   icon:'NX',  cls:'icon-nuxt',   name:'Nuxt 3',       desc:'SSR or static site generation',       buildCmd:'npm run build',                          outputDir:'.output/' },
@@ -113,24 +120,31 @@ const CRON_PRESETS = [
 
 const stepLabels = ['App Type', 'Repository', 'Build', 'Settings', 'Schedule', 'Review']
 
-// ── Deploy targets per-server ──────────────────────────────────────────
-// Each entry: { serverId, deployDir, serviceName, port, healthCheckUrl }
+// Helper to parse environment variables from JSON or Array
+const parseEnvVars = (raw) => {
+  if (!raw) return [{ key: '', val: '' }]
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return (Array.isArray(parsed) && parsed.length) ? [...parsed] : [{ key: '', val: '' }]
+  } catch {
+    return [{ key: '', val: '' }]
+  }
+}
 
 const form = ref({
   type: props.app?.type || 'dotnet',
   name: props.app?.name || '',
   repoUrl: props.app?.repoUrl || '',
   branch: props.app?.branch || 'main',
-  trigger: 'manual',
+  trigger: props.app?.trigger || 'manual',
   token: '',
   buildCmd: props.app?.buildCmd || '',
   outputDir: props.app?.outputDir || '',
-  envVars: [{ key: '', val: '' }],
+  envVars: parseEnvVars(props.app?.envVars),
   settingFiles: [],
   scheduleEnabled: props.app?.scheduleEnabled || false,
   scheduleCron: props.app?.scheduleCron || '0 2 * * *',
-  /** @type {{ serverId: string, deployDir: string, serviceName: string, port: string, healthCheckUrl: string }[]} */
-  deployTargets: [],
+  deployTargets: props.app?.deployTargets ? JSON.parse(JSON.stringify(props.app.deployTargets)) : [],
 })
 
 // Load servers and settings when component mounts

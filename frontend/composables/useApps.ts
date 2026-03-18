@@ -38,7 +38,7 @@ export interface DeployJob {
 export interface DeployLog {
   timestamp: string
   message: string
-  type: string
+  level: string
 }
 
 export const useAppsStore = defineStore('apps', {

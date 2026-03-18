@@ -36,7 +36,12 @@
 
     <div class="detail-content scrollable">
       <AppOverviewTab v-if="activeTab === 'overview'" :app="app" :currentJob="currentJob" />
-      <AppLogsTab v-if="activeTab === 'logs'" :logs="logs" />
+      <AppLogsTab 
+        v-if="activeTab === 'logs'" 
+        :app-id="app.id"
+        :job-id="currentJob?.id"
+        :logs="logs" 
+      />
       <AppTargetsTab v-if="activeTab === 'targets'" :app="app" />
       <AppDeploymentHistoryTab v-if="activeTab === 'history'" :app="app" />
     </div>

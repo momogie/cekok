@@ -93,13 +93,10 @@ onMounted(async () => {
     selectApp(apps.value[0])
   }
   
-  // Polling for active deployments
+  // Polling for active deployments status
   polling.value = setInterval(() => {
     if (currentApp.value) {
       appsCtx.fetchStatus(currentApp.value.id)
-      if (currentJob.value?.status === 'Running') {
-        appsCtx.fetchLogs(currentApp.value.id)
-      }
     }
   }, 3000)
 })

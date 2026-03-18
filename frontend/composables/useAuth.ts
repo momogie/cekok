@@ -81,7 +81,7 @@ export const useAuthStore = defineStore('auth', {
       navigateTo('/login')
     },
 
-    authHeaders() {
+    authHeaders(): Record<string, string> {
       return this.accessToken
         ? { Authorization: `Bearer ${this.accessToken}` }
         : {}
