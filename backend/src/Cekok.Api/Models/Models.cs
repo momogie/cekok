@@ -115,6 +115,7 @@ public class DeployJob
     [Required] public string Status { get; set; } = "queued"; // queued | running | success | failed
     public string? CommitHash { get; set; }
     public string? CommitMsg { get; set; }
+    public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("O");
     public string? StartedAt { get; set; }
     public string? FinishedAt { get; set; }
 }

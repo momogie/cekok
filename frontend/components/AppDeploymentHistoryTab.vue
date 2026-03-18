@@ -15,12 +15,12 @@
             <span class="status-indicator"></span>
             {{ item.status }}
           </div>
-          <div class="history-time">{{ formatTime(item.startedAt || item.finishedAt) }}</div>
+          <div class="history-time">{{ formatTime(item.startedAt || item.createdAt || item.finishedAt) }}</div>
         </div>
         <div class="history-title">Deploy {{ item.commitHash?.substring(0, 7) || 'Manual' }}</div>
         <div class="history-meta">
           <span v-if="item.commitMsg">{{ item.commitMsg }}</span>
-          <span v-else>Triggered by {{ item.triggeredBy }}</span>
+          <span v-else>Triggered by {{ item.triggeredBy || item.triggeredByUser || 'System' }}</span>
           <span class="meta-sep">•</span>
           <span>Hash: {{ item.commitHash || 'N/A' }}</span>
         </div>

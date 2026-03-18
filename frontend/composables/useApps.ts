@@ -28,11 +28,13 @@ export interface DeployJob {
   id: string
   appId: string
   status: string
-  triggerBy: string
-  startedAt: string
-  completedAt?: string
-  errorMessage?: string
-  progress: number
+  triggeredBy: string // manual | schedule | webhook
+  triggeredByUser?: string // userId
+  commitHash?: string
+  commitMsg?: string
+  createdAt: string
+  startedAt?: string
+  finishedAt?: string
 }
 
 export interface DeployLog {

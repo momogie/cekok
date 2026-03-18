@@ -337,14 +337,14 @@ WantedBy=multi-user.target
 
     public async Task<List<DeployJob>> GetHistoryAsync(int page, int size, CancellationToken ct) =>
         await db.DeployJobs
-            .OrderByDescending(j => j.StartedAt)
+            .OrderByDescending(j => j.CreatedAt)
             .Skip(page * size).Take(size)
             .ToListAsync(ct);
 
     public async Task<List<DeployJob>> GetAppHistoryAsync(string appId, int page, int size, CancellationToken ct) =>
         await db.DeployJobs
             .Where(j => j.AppId == appId)
-            .OrderByDescending(j => j.StartedAt)
+            .OrderByDescending(j => j.CreatedAt)
             .Skip(page * size).Take(size)
             .ToListAsync(ct);
 }
