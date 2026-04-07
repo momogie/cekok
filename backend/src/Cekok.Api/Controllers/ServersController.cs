@@ -115,7 +115,7 @@ public static class ServersController
             var pw = enc.Decrypt(srv.SshPasswordEnc);
 
             try {
-                var hostname = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "hostname", ct)).Trim();
+                var hostname = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "hostname", ct)).Trim();
                 
                 if (srv.Hostname != hostname)
                 {
@@ -123,15 +123,31 @@ public static class ServersController
                     await db.SaveChangesAsync(ct);
                 }
 
-                var cpuModel = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs", ct)).Trim();
-                var cpuCount = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "nproc", ct)).Trim();
-                var uptime = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "uptime -p", ct)).Trim();
+                var cpuModel = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs", ct)).Trim();
+                if (string.IsNullOrWhiteSpace(cpuModel))
+                {
+                    cpuModel = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "lscpu 2>/dev/null | grep 'Model name' | cut -d: -f2 | xargs", ct)).Trim();
+                }
+                var cpuCountRaw = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "nproc 2>/dev/null", ct)).Trim();
+                var cpuCount = string.IsNullOrWhiteSpace(cpuCountRaw) 
+                    ? (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "lscpu 2>/dev/null | grep '^CPU(s):' | cut -d: -f2 | xargs", ct)).Trim()
+                    : cpuCountRaw;
+                var uptimeRaw = await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "uptime -p 2>/dev/null", ct);
+                var uptime = string.IsNullOrWhiteSpace(uptimeRaw) 
+                    ? (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "uptime", ct)).Trim()
+                    : uptimeRaw.Trim();
+                var osInfo = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "lsb_release -d 2>/dev/null | cut -f2 | xargs", ct)).Trim();
+                if (string.IsNullOrWhiteSpace(osInfo))
+                {
+                    osInfo = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "cat /etc/os-release 2>/dev/null | grep 'PRETTY_NAME' | cut -d= -f2 | tr -d '\"'", ct)).Trim();
+                }
                 
                 return Results.Ok(new {
                     hostname,
                     uptime,
                     cpu = $"{cpuCount} Cores ({cpuModel})",
                     cpuCores = int.TryParse(cpuCount, out var cc) ? cc : 0,
+                    os = osInfo,
                 });
             } catch (Exception ex) {
                 return Results.Problem(ex.Message);
@@ -154,10 +170,23 @@ public static class ServersController
             var pw = enc.Decrypt(srv.SshPasswordEnc);
 
             try {
-                var cpuUsage = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "top -bn1 | grep 'Cpu(s)' | awk '{print $2+$4}'", ct)).Trim();
-                var ramData = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "free -m | awk '/^Mem:/ {print $3, $2}'", ct)).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                var swapData = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "free -m | awk '/^Swap:/ {print $3, $2}'", ct)).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                var diskRaw = await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "df -m -x tmpfs -x devtmpfs -x squashfs -x overlay --output=source,size,used,avail,pcent,target | tail -n +2", ct);
+                var cpuUsageRaw = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "top -bn1 2>/dev/null | grep 'Cpu(s)' | awk '{print $2+$4}'", ct)).Trim();
+                var cpuUsage = double.TryParse(cpuUsageRaw, out var cpuVal) ? cpuVal : 0;
+                if (cpuUsage == 0)
+                {
+                    var altCpu = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "top -bn1 2>/dev/null | head -5 | grep 'Cpu'", ct)).Trim();
+                    if (!string.IsNullOrWhiteSpace(altCpu))
+                    {
+                        var match = System.Text.RegularExpressions.Regex.Match(altCpu, @"(\d+\.?\d*)\s*id");
+                        if (match.Success && double.TryParse(match.Groups[1].Value, out var idle))
+                        {
+                            cpuUsage = 100 - idle;
+                        }
+                    }
+                }
+                var ramData = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "free -m 2>/dev/null | awk '/^Mem:/ {print $3, $2}'", ct)).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var swapData = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "free -m 2>/dev/null | awk '/^Swap:/ {print $3, $2}'", ct)).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var diskRaw = await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "df -m -x tmpfs -x devtmpfs -x squashfs -x overlay --output=source,size,used,avail,pcent,target 2>/dev/null | tail -n +2", ct);
                 var disks = diskRaw.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => {
                     var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     return new {
@@ -169,12 +198,15 @@ public static class ServersController
                         Mount = parts.ElementAtOrDefault(5)
                     };
                 }).Where(d => d.FileSystem != null && d.FileSystem.StartsWith("/dev/")).ToList();
-                var netData = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "awk 'NR>2 && $1 != \"lo:\" {print $2,$10; exit}' /proc/net/dev", ct)).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                var uptime = (await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "uptime -p", ct)).Trim();
+                var netData = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "awk 'NR>2 && $1 != \"lo:\" {print $2,$10; exit}' /proc/net/dev 2>/dev/null", ct)).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var uptimeRaw = await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "uptime -p 2>/dev/null", ct);
+                var uptime = string.IsNullOrWhiteSpace(uptimeRaw) 
+                    ? (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "uptime", ct)).Trim()
+                    : uptimeRaw.Trim();
 
                 return Results.Ok(new {
                     uptime,
-                    cpuUsage = double.TryParse(cpuUsage, out var c) ? c : 0,
+                    cpuUsage,
                     ramUsed = int.TryParse(ramData.ElementAtOrDefault(0), out var ru) ? ru : 0,
                     ramTotal = int.TryParse(ramData.ElementAtOrDefault(1), out var rt) ? rt : 0,
                     swapUsed = int.TryParse(swapData.ElementAtOrDefault(0), out var su) ? su : 0,
@@ -375,6 +407,19 @@ public static class ServersController
         });
 
         return group;
+    }
+
+    private static async Task<string> TryRunCmd(SshService ssh, string ip, int port, string user, string pw, string cmd, CancellationToken ct)
+    {
+        try
+        {
+            var (output, error, status) = await ssh.RunCommandDetailedAsync(ip, port, user, pw, cmd, ct);
+            return status == 0 ? output : "";
+        }
+        catch
+        {
+            return "";
+        }
     }
 
     public record CreateServerDto(string Name, string Ip, int SshPort, string SshUser,

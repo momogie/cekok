@@ -12,7 +12,7 @@
           <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10,10"/></svg>
           {{ stats?.uptime || sysInfo?.uptime || '...' }}
         </span>
-        <span class="tag">Ubuntu 22.04</span>
+        <span class="tag">{{ sysInfo?.os || '...' }}</span>
       </div>
       
       <div class="det-btns">
