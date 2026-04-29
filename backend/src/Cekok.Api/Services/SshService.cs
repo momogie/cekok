@@ -5,12 +5,23 @@ namespace Cekok.Api.Services;
 
 public class SshService
 {
+    public static AsyncLocal<string?> CurrentSuPassword { get; } = new();
     public async Task<(string Output, string Error, int ExitStatus)> RunCommandDetailedAsync(string host, int port, string user, string password,
         string command, CancellationToken ct = default)
     {
         using var client = new SshClient(host, port, user, password);
         await Task.Run(() => client.Connect(), ct);
-        using var cmd = client.RunCommand(command);
+        
+        var finalCommand = command;
+        var activeSuPassword = CurrentSuPassword.Value;
+        if (!string.IsNullOrEmpty(activeSuPassword) && user != "root")
+        {
+            var escapedSuPw = activeSuPassword.Replace("\"", "\\\"").Replace("`", "\\`").Replace("$", "\\$");
+            var escapedCmd = command.Replace("\"", "\\\"").Replace("`", "\\`").Replace("$", "\\$");
+            finalCommand = $"python3 -c \"import sys, pty, os; pid, fd = pty.fork(); os.execvp('su', ['su', '-c', sys.argv[2]]) if pid == 0 else (os.write(fd, sys.argv[1].encode() + b'\\n'), exec('try:\\n skip=True\\n while True:\\n  d=os.read(fd,4096)\\n  if not d:break\\n  if skip:\\n   if b\\\":\\\" in d:\\n    d=d[d.find(b\\\":\\\")+1:].lstrip()\\n    skip=False\\n   else:\\n    continue\\n  sys.stdout.buffer.write(d);sys.stdout.flush()\\nexcept:pass'))\" \"{escapedSuPw}\" \"{escapedCmd}\"";
+        }
+
+        using var cmd = client.RunCommand(finalCommand);
         var output = cmd.Result;
         var error = cmd.Error;
         var exitStatus = cmd.ExitStatus;
@@ -39,7 +50,16 @@ public class SshService
         using var client = new SshClient(host, port, user, password);
         await Task.Run(() => client.Connect(), ct);
 
-        using var cmd = client.CreateCommand(command);
+        var finalCommand = command;
+        var activeSuPassword = CurrentSuPassword.Value;
+        if (!string.IsNullOrEmpty(activeSuPassword) && user != "root")
+        {
+            var escapedSuPw = activeSuPassword.Replace("\"", "\\\"").Replace("`", "\\`").Replace("$", "\\$");
+            var escapedCmd = command.Replace("\"", "\\\"").Replace("`", "\\`").Replace("$", "\\$");
+            finalCommand = $"python3 -c \"import sys, pty, os; pid, fd = pty.fork(); os.execvp('su', ['su', '-c', sys.argv[2]]) if pid == 0 else (os.write(fd, sys.argv[1].encode() + b'\\n'), exec('try:\\n skip=True\\n while True:\\n  d=os.read(fd,4096)\\n  if not d:break\\n  if skip:\\n   if b\\\":\\\" in d:\\n    d=d[d.find(b\\\":\\\")+1:].lstrip()\\n    skip=False\\n   else:\\n    continue\\n  sys.stdout.buffer.write(d);sys.stdout.flush()\\nexcept:pass'))\" \"{escapedSuPw}\" \"{escapedCmd}\"";
+        }
+
+        using var cmd = client.CreateCommand(finalCommand);
         var result = cmd.BeginExecute();
 
         using var reader = new StreamReader(cmd.OutputStream);

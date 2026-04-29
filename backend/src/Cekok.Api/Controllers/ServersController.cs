@@ -88,6 +88,8 @@ public static class ServersController
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
+            var suPw = !string.IsNullOrEmpty(srv.SshSuPasswordEnc) ? enc.Decrypt(srv.SshSuPasswordEnc) : null;
+            SshService.CurrentSuPassword.Value = suPw;
             var ok = await ssh.TestConnectionAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, ct);
             
             if (ok)
@@ -119,6 +121,8 @@ public static class ServersController
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
+            var suPw = !string.IsNullOrEmpty(srv.SshSuPasswordEnc) ? enc.Decrypt(srv.SshSuPasswordEnc) : null;
+            SshService.CurrentSuPassword.Value = suPw;
 
             try {
                 var hostname = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "hostname", ct)).Trim();
@@ -174,6 +178,8 @@ public static class ServersController
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
+            var suPw = !string.IsNullOrEmpty(srv.SshSuPasswordEnc) ? enc.Decrypt(srv.SshSuPasswordEnc) : null;
+            SshService.CurrentSuPassword.Value = suPw;
 
             try {
                 var cpuUsageRaw = (await TryRunCmd(ssh, srv.Ip, srv.SshPort, srv.SshUser, pw, "top -bn1 2>/dev/null | grep 'Cpu(s)' | awk '{print $2+$4}'", ct)).Trim();
@@ -242,6 +248,8 @@ public static class ServersController
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
+            var suPw = !string.IsNullOrEmpty(srv.SshSuPasswordEnc) ? enc.Decrypt(srv.SshSuPasswordEnc) : null;
+            SshService.CurrentSuPassword.Value = suPw;
             var sudoPrefix = srv.SshUser == "root" ? "" : $"echo '{pw.Replace("'", "'\\''")}' | sudo -S ";
 
             try {
@@ -344,6 +352,8 @@ public static class ServersController
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
+            var suPw = !string.IsNullOrEmpty(srv.SshSuPasswordEnc) ? enc.Decrypt(srv.SshSuPasswordEnc) : null;
+            SshService.CurrentSuPassword.Value = suPw;
 
             try {
                 var procRaw = await ssh.RunCommandAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, "ps -eo pid,ppid,cmd,%cpu,%mem --sort=-%cpu | head -n 11 | tail -n +2", ct);
@@ -378,6 +388,8 @@ public static class ServersController
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
+            var suPw = !string.IsNullOrEmpty(srv.SshSuPasswordEnc) ? enc.Decrypt(srv.SshSuPasswordEnc) : null;
+            SshService.CurrentSuPassword.Value = suPw;
 
             try {
                 var (output, error, status) = await ssh.RunCommandDetailedAsync(srv.Ip, srv.SshPort, srv.SshUser, pw, dto.Command, ct);
@@ -401,6 +413,8 @@ public static class ServersController
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
             var pw = enc.Decrypt(srv.SshPasswordEnc);
+            var suPw = !string.IsNullOrEmpty(srv.SshSuPasswordEnc) ? enc.Decrypt(srv.SshSuPasswordEnc) : null;
+            SshService.CurrentSuPassword.Value = suPw;
 
             return Results.Stream(async stream => {
                 using var writer = new StreamWriter(stream);
