@@ -37,6 +37,7 @@ public static class ServersController
                 Name = dto.Name, Ip = dto.Ip, SshPort = dto.SshPort,
                 SshUser = dto.SshUser,
                 SshPasswordEnc = enc.Encrypt(dto.SshPassword),
+                SshSuPasswordEnc = !string.IsNullOrEmpty(dto.SshSuPassword) ? enc.Encrypt(dto.SshSuPassword) : null,
                 Role = dto.Role, Tags = dto.Tags,
             };
             db.Servers.Add(server);
@@ -60,6 +61,11 @@ public static class ServersController
             if (!string.IsNullOrEmpty(dto.SshPassword))
             {
                 srv.SshPasswordEnc = enc.Encrypt(dto.SshPassword);
+            }
+
+            if (!string.IsNullOrEmpty(dto.SshSuPassword))
+            {
+                srv.SshSuPasswordEnc = enc.Encrypt(dto.SshSuPassword);
             }
 
             await db.SaveChangesAsync(ct);
@@ -423,10 +429,10 @@ public static class ServersController
     }
 
     public record CreateServerDto(string Name, string Ip, int SshPort, string SshUser,
-        string SshPassword, string Role, string? Tags);
+        string SshPassword, string? SshSuPassword, string Role, string? Tags);
 
     public record UpdateServerDto(string Name, string Ip, int SshPort, string SshUser,
-        string? SshPassword, string Role, string? Tags);
+        string? SshPassword, string? SshSuPassword, string Role, string? Tags);
 
     public record ExecuteCmdDto(string Command);
 }

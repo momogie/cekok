@@ -14,7 +14,7 @@ namespace Cekok.Api.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.14");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.15");
 
             modelBuilder.Entity("Cekok.Api.Models.AppSettingFile", b =>
                 {
@@ -365,6 +365,9 @@ namespace Cekok.Api.Migrations
 
                     b.Property<int>("SshPort")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("SshSuPasswordEnc")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("SshUser")
                         .IsRequired()

@@ -59,6 +59,7 @@ public class Server
     public int SshPort { get; set; } = 22;
     [Required] public string SshUser { get; set; } = "";
     [Required] public string SshPasswordEnc { get; set; } = "";
+    public string? SshSuPasswordEnc { get; set; }
     [Required] public string Role { get; set; } = "app-server"; // master | app-server | proxy | db-server
     public string? Hostname { get; set; }
     public string? Tags { get; set; } // JSON array

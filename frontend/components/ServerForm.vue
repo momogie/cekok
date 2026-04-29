@@ -38,6 +38,10 @@
             <input v-model="form.sshPassword" type="password" placeholder="••••••••" :required="!isEdit">
           </div>
           <div class="form-group full-width">
+            <label>SU Password (Optional)</label>
+            <input v-model="form.sshSuPassword" type="password" placeholder="••••••••">
+          </div>
+          <div class="form-group full-width">
             <label>Tags (Optional)</label>
             <input v-model="form.tags" type="text" placeholder="sg-ap, ubuntu-22, production">
             <div class="form-hint">Comma separated tags for organization</div>
@@ -76,6 +80,7 @@ const form = ref({
   sshPort: props.server?.sshPort || 22,
   sshUser: props.server?.sshUser || 'root',
   sshPassword: '',
+  sshSuPassword: '',
   role: props.server?.role || 'worker',
   tags: props.server?.tags || ''
 })
