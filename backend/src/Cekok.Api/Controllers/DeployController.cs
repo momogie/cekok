@@ -1,5 +1,5 @@
 using Cekok.Api.Data;
-using Cekok.Api.Services;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -14,13 +14,12 @@ public static class DeployController
     public static RouteGroupBuilder MapDeployEndpoints(this RouteGroupBuilder group)
     {
         group.MapPost("/{appId}", async (
-            string appId, DeployService svc,
+            string appId, IDeployService svc,
             CekokDbContext db, HttpContext ctx, CancellationToken ct) =>
         {
             var role   = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
-            // viewer cannot deploy
             if (role == "viewer") return Results.Forbid();
 
             IEnumerable<string> allowedServerIds;
@@ -46,14 +45,14 @@ public static class DeployController
         });
 
         group.MapGet("/{appId}/status", async (
-            string appId, DeployService svc, CancellationToken ct) =>
+            string appId, IDeployService svc, CancellationToken ct) =>
         {
             var job = await svc.GetStatusAsync(appId, ct);
             return job is null ? Results.NotFound() : Results.Ok(job);
         });
 
         group.MapGet("/{appId}/logs", async (
-            string appId, string? jobId, DeployService svc,
+            string appId, string? jobId, IDeployService svc,
             CekokDbContext db, CancellationToken ct) =>
         {
             var resolvedJobId = jobId ?? (await svc.GetStatusAsync(appId, ct))?.Id;
@@ -62,11 +61,11 @@ public static class DeployController
         });
 
         group.MapGet("/history", async (
-            int? page, int? size, DeployService svc, CancellationToken ct) =>
+            int? page, int? size, IDeployService svc, CancellationToken ct) =>
             Results.Ok(await svc.GetHistoryAsync(page ?? 0, size ?? 20, ct)));
 
         group.MapGet("/{appId}/history", async (
-            string appId, int? page, int? size, DeployService svc, CancellationToken ct) =>
+            string appId, int? page, int? size, IDeployService svc, CancellationToken ct) =>
             Results.Ok(await svc.GetAppHistoryAsync(appId, page ?? 0, size ?? 20, ct)));
 
         group.MapPost("/{jobId}/rollback", [Authorize(Roles = "admin,operator")] async (

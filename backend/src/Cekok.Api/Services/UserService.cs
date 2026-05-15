@@ -1,14 +1,13 @@
 using Cekok.Api.Data;
-using Cekok.Api.Models;
+using Cekok.Api.Dtos;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Models.Enums;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cekok.Api.Services;
 
-public record CreateUserRequest(string Username, string DisplayName, string Password, string Role);
-public record UpdateUserRequest(string? DisplayName, string? Role, bool? IsActive);
-public record SetServerAccessRequest(string ServerId, bool CanDeploy, bool CanManage);
-
-public class UserService(CekokDbContext db)
+public class UserService(CekokDbContext db) : IUserService
 {
     public async Task<List<User>> GetAllAsync(CancellationToken ct) =>
         await db.Users.OrderBy(u => u.Username).ToListAsync(ct);

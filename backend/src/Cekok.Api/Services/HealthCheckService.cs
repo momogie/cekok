@@ -1,6 +1,8 @@
+using Cekok.Api.Services.Abstractions;
+
 namespace Cekok.Api.Services;
 
-public class HealthCheckService(IHttpClientFactory factory)
+public class HealthCheckService(IHttpClientFactory factory) : IHealthCheckService
 {
     public async Task<bool> CheckAsync(string url, CancellationToken ct = default)
     {

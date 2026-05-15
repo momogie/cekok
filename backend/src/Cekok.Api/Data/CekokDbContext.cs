@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Cekok.Api.Models;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Models.Enums;
 
 namespace Cekok.Api.Data;
 
@@ -24,7 +25,7 @@ public class CekokDbContext(DbContextOptions<CekokDbContext> options) : DbContex
         modelBuilder.Entity<User>(e =>
         {
             e.HasIndex(u => u.Username).IsUnique();
-            e.Property(u => u.Role).HasConversion<string>();
+            e.Property(u => u.Role).HasConversion<string>().HasColumnType("TEXT");
         });
 
         modelBuilder.Entity<UserServerAccess>(e =>

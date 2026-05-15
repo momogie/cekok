@@ -1,14 +1,13 @@
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Cekok.Api.Models;
 
 namespace Cekok.Api.Services;
 
-public class BuildService(IConfiguration config, ILogger<BuildService> logger)
+public class BuildService(IConfiguration config, ILogger<BuildService> logger) : IBuildService
 {
     private readonly string _buildDir = config["Cekok:BuildDir"] ?? 
         (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Path.Combine(Path.GetTempPath(), "cekok-builds") : "/tmp/cekok-builds");

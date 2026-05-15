@@ -1,12 +1,13 @@
 using System.Net;
 using System.Net.Mail;
 using Cekok.Api.Data;
-using Cekok.Api.Models;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cekok.Api.Services;
 
-public class NotificationService(CekokDbContext db, EncryptionService enc, ILogger<NotificationService> logger)
+public class NotificationService(CekokDbContext db, IEncryptionService enc, ILogger<NotificationService> logger) : INotificationService
 {
     public async Task SendDeploymentNotificationAsync(Application app, DeployJob job, Func<string, string, Task>? log = null)
     {

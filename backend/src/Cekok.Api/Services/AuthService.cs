@@ -2,20 +2,16 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Extensions.Configuration;
 using Cekok.Api.Data;
-using Cekok.Api.Models;
+using Cekok.Api.Dtos;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Cekok.Api.Services;
 
-public record LoginRequest(string Username, string Password);
-public record LoginResponse(string AccessToken, string RefreshToken, UserDto User);
-public record RefreshRequest(string RefreshToken);
-public record UserDto(string Id, string Username, string DisplayName, string Role);
-
-public class AuthService(CekokDbContext db, IConfiguration config)
+public class AuthService(CekokDbContext db, IConfiguration config) : IAuthService
 {
     private readonly string _jwtSecret =
         Environment.GetEnvironmentVariable("CEKOK_JWT_SECRET")

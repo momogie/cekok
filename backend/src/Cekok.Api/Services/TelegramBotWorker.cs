@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cekok.Api.Data;
-using Cekok.Api.Models;
+using Cekok.Api.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cekok.Api.Services;

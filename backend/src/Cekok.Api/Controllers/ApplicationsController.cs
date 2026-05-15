@@ -1,6 +1,7 @@
 using Cekok.Api.Data;
-using Cekok.Api.Models;
-using Cekok.Api.Services;
+using Cekok.Api.Dtos;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -52,7 +53,7 @@ public static class ApplicationsController
 
         // POST /api/applications — create app
         group.MapPost("/", [Authorize(Roles = "admin,operator")] async (
-            CreateAppDto dto, CekokDbContext db, HttpContext ctx, EncryptionService enc, CancellationToken ct) =>
+            CreateAppDto dto, CekokDbContext db, HttpContext ctx, IEncryptionService enc, CancellationToken ct) =>
         {
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -183,7 +184,7 @@ public static class ApplicationsController
 
         // PUT /api/applications/{id}
         group.MapPut("/{id}", [Authorize(Roles = "admin,operator")] async (
-            string id, UpdateAppDto dto, CekokDbContext db, HttpContext ctx, EncryptionService enc, CancellationToken ct) =>
+            string id, UpdateAppDto dto, CekokDbContext db, HttpContext ctx, IEncryptionService enc, CancellationToken ct) =>
         {
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -283,7 +284,7 @@ public static class ApplicationsController
         });
 
         // GET /api/applications/{id}/settings
-        group.MapGet("/{id}/settings", [Authorize(Roles = "admin,operator")] async (string id, CekokDbContext db, EncryptionService enc, CancellationToken ct) =>
+        group.MapGet("/{id}/settings", [Authorize(Roles = "admin,operator")] async (string id, CekokDbContext db, IEncryptionService enc, CancellationToken ct) =>
         {
             var settings = await db.AppSettingFiles.Where(s => s.AppId == id).ToListAsync(ct);
             var result = settings.Select(s => new {
@@ -306,7 +307,7 @@ public static class ApplicationsController
 
         // POST /api/applications/{id}/notify-test
         group.MapPost("/{id}/notify-test", [Authorize(Roles = "admin,operator")] async (
-            string id, string type, CekokDbContext db, NotificationService notify, CancellationToken ct) =>
+            string id, string type, CekokDbContext db, INotificationService notify, CancellationToken ct) =>
         {
             var app = await db.Applications.FindAsync([id], ct);
             if (app is null) return Results.NotFound();
@@ -318,64 +319,4 @@ public static class ApplicationsController
         return group;
     }
 
-    // ────── DTOs ──────
-
-    /// <summary>Flat DTO matching AppForm.vue fields.</summary>
-    public record CreateAppDto(
-        string Name,
-        string Type,
-        string RepoUrl,
-        string? Branch,
-        string? BuildCmd,
-        string? OutputDir,
-        /// <summary>manual | webhook | schedule | both</summary>
-        string? Trigger,
-        /// <summary>GitHub Personal Access Token (plain — stored encrypted)</summary>
-        string? Token,
-        /// <summary>Environment variables [{key, val}]</summary>
-        List<EnvVarDto>? EnvVars,
-        List<SettingFileDto>? SettingFiles,
-        /// <summary>Multi-server deploy targets (new form)</summary>
-        List<DeployTargetDto>? DeployTargets,
-        /// <summary>Legacy single-server fields (backward compat)</summary>
-        string? DeployDir,
-        string? ServiceName,
-        int? Port,
-        string? ServerId,
-        string? ScheduleCron,
-        bool ScheduleEnabled,
-        string? EntryFile,
-        bool NotifyEmail,
-        string? NotifyEmailAddress,
-        bool NotifyTelegram,
-        string? NotifyTelegramChatId
-    );
-
-    public record UpdateAppDto(
-        string? Name,
-        string? RepoUrl,
-        string? Branch,
-        string? BuildCmd,
-        string? OutputDir,
-        string? Trigger,
-        string? Token,
-        List<EnvVarDto>? EnvVars,
-        List<SettingFileDto>? SettingFiles,
-        /// <summary>Multi-server deploy targets — replaces all existing targets when provided</summary>
-        List<DeployTargetDto>? DeployTargets,
-        string? ScheduleCron,
-        bool? ScheduleEnabled,
-        string? EntryFile,
-        bool? NotifyEmail,
-        string? NotifyEmailAddress,
-        bool? NotifyTelegram,
-        string? NotifyTelegramChatId
-    );
-
-    public record EnvVarDto(string Key, string Val);
-    public record SettingFileDto(string FilePath, string Content);
-
-    // Kept for backwards compat with other parts of the codebase
-    public record DeployTargetDto(string ServerId, string DeployDir,
-        string? ServiceName, int? Port, string? HealthCheckUrl);
 }

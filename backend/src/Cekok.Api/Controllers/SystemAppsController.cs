@@ -1,5 +1,5 @@
 using Cekok.Api.Data;
-using Cekok.Api.Services;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +14,7 @@ public static class SystemAppsController
     public static RouteGroupBuilder MapSystemAppsEndpoints(this RouteGroupBuilder group)
     {
         group.MapGet("/{serverId}/status", async (
-            string serverId, SystemAppService svc, CekokDbContext db, HttpContext ctx, CancellationToken ct) =>
+            string serverId, ISystemAppService svc, CekokDbContext db, HttpContext ctx, CancellationToken ct) =>
         {
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -29,7 +29,7 @@ public static class SystemAppsController
         });
 
         group.MapPost("/{serverId}/install/{appId}", [Authorize(Roles = "admin")] async (
-            string serverId, string appId, SystemAppService svc, HttpContext context, CancellationToken ct) =>
+            string serverId, string appId, ISystemAppService svc, HttpContext context, CancellationToken ct) =>
         {
             context.Response.ContentType = "text/plain";
             await foreach (var line in svc.InstallStreamAsync(serverId, appId, ct))

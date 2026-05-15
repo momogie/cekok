@@ -1,8 +1,9 @@
+using Cekok.Api.Services.Abstractions;
 using Renci.SshNet;
 
 namespace Cekok.Api.Services;
 
-public class ScpService
+public class ScpService : IScpService
 {
     /// <summary>
     /// Upload directory contents to remote server via SCP.

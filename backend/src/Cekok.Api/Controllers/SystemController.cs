@@ -1,13 +1,14 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Cekok.Api.Data;
+using Cekok.Api.Dtos;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using Cekok.Api.Data;
-using Cekok.Api.Models;
-using Cekok.Api.Services;
 
 namespace Cekok.Api.Controllers;
 
@@ -145,7 +146,7 @@ public static class SystemController
             }));
         });
 
-        group.MapPost("/settings", [Authorize(Roles = "admin")] async (List<UpdateSettingRequest> req, CekokDbContext db, EncryptionService encryption, CancellationToken ct) =>
+        group.MapPost("/settings", [Authorize(Roles = "admin")] async (List<UpdateSettingRequest> req, CekokDbContext db, IEncryptionService encryption, CancellationToken ct) =>
         {
             foreach (var item in req)
             {
@@ -226,5 +227,3 @@ public static class SystemController
         }
     }
 }
-
-public record UpdateSettingRequest(string Key, string Value, string? Group, bool IsSecure);

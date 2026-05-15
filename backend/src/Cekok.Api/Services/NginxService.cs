@@ -1,11 +1,11 @@
 using Cekok.Api.Data;
-using Cekok.Api.Models;
-using Cekok.Api.Services;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cekok.Api.Services;
 
-public class NginxService(CekokDbContext db, SshService sshSvc, EncryptionService encSvc)
+public class NginxService(CekokDbContext db, ISshService sshSvc, IEncryptionService encSvc) : INginxService
 {
     public async Task<string> GetStatusAsync(string serverId, CancellationToken ct)
     {

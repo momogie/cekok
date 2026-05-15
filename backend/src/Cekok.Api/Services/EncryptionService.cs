@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.Extensions.Configuration;
 
 namespace Cekok.Api.Services;
@@ -7,7 +8,7 @@ namespace Cekok.Api.Services;
 /// <summary>
 /// AES-256-GCM encryption for SSH passwords stored in database.
 /// </summary>
-public class EncryptionService(IConfiguration config)
+public class EncryptionService(IConfiguration config) : IEncryptionService
 {
     private readonly byte[] _key = DeriveKey(
         Environment.GetEnvironmentVariable("CEKOK_ENCRYPTION_SECRET")

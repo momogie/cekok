@@ -1,11 +1,10 @@
 using Cekok.Api.Data;
-using Cekok.Api.Models;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using System.Linq;
 using System.Text.Json;
-using System.IO;
 using System.IO.Compression;
 
 namespace Cekok.Api.Services;
@@ -13,7 +12,7 @@ namespace Cekok.Api.Services;
 public class DeployService(
     IServiceScopeFactory scopeFactory,
     CekokDbContext db,
-    ILogger<DeployService> logger)
+    ILogger<DeployService> logger) : IDeployService
 {
     public async Task<DeployJob> TriggerAsync(string appId, string triggeredBy,
         string? userId, IEnumerable<string> allowedServerIds, CancellationToken ct)

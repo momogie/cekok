@@ -1,8 +1,8 @@
 using Cekok.Api.Data;
-using Cekok.Api.Models;
+using Cekok.Api.Dtos;
+using Cekok.Api.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -44,6 +44,4 @@ public static class ScheduleController
 
         return group;
     }
-
-    public record UpdateScheduleDto(string? Cron, bool Enabled);
 }

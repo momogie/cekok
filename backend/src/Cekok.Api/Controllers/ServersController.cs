@@ -1,6 +1,8 @@
 using Cekok.Api.Data;
-using Cekok.Api.Models;
+using Cekok.Api.Dtos;
+using Cekok.Api.Models.Entities;
 using Cekok.Api.Services;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -30,7 +32,7 @@ public static class ServersController
         });
 
         group.MapPost("/", [Authorize(Roles = "admin")] async (
-            CreateServerDto dto, CekokDbContext db, EncryptionService enc, CancellationToken ct) =>
+            CreateServerDto dto, CekokDbContext db, IEncryptionService enc, CancellationToken ct) =>
         {
             var server = new Server
             {
@@ -46,7 +48,7 @@ public static class ServersController
         });
 
         group.MapPut("/{id}", [Authorize(Roles = "admin")] async (
-            string id, UpdateServerDto dto, CekokDbContext db, EncryptionService enc, CancellationToken ct) =>
+            string id, UpdateServerDto dto, CekokDbContext db, IEncryptionService enc, CancellationToken ct) =>
         {
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
@@ -83,7 +85,7 @@ public static class ServersController
         });
 
         group.MapPost("/{id}/test-connection", async (
-            string id, CekokDbContext db, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, CekokDbContext db, ISshService ssh, IEncryptionService enc, CancellationToken ct) =>
         {
             var srv = await db.Servers.FindAsync([id], ct);
             if (srv is null) return Results.NotFound();
@@ -108,7 +110,7 @@ public static class ServersController
         });
 
         group.MapGet("/{id}/sys-info", async (
-            string id, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, CekokDbContext db, HttpContext ctx, ISshService ssh, IEncryptionService enc, CancellationToken ct) =>
         {
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -165,7 +167,7 @@ public static class ServersController
         });
 
         group.MapGet("/{id}/stats", async (
-            string id, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, CekokDbContext db, HttpContext ctx, ISshService ssh, IEncryptionService enc, CancellationToken ct) =>
         {
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -235,7 +237,7 @@ public static class ServersController
         });
 
         group.MapGet("/{id}/network", async (
-            string id, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, CekokDbContext db, HttpContext ctx, ISshService ssh, IEncryptionService enc, CancellationToken ct) =>
         {
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -339,7 +341,7 @@ public static class ServersController
         });
 
         group.MapGet("/{id}/processes", async (
-            string id, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, CekokDbContext db, HttpContext ctx, ISshService ssh, IEncryptionService enc, CancellationToken ct) =>
         {
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -375,7 +377,7 @@ public static class ServersController
         });
 
         group.MapPost("/{id}/execute", async (
-            string id, ExecuteCmdDto dto, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, ExecuteCmdDto dto, CekokDbContext db, HttpContext ctx, ISshService ssh, IEncryptionService enc, CancellationToken ct) =>
         {
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -400,7 +402,7 @@ public static class ServersController
         });
 
         group.MapPost("/{id}/execute-stream", async (
-            string id, ExecuteCmdDto dto, CekokDbContext db, HttpContext ctx, SshService ssh, EncryptionService enc, CancellationToken ct) =>
+            string id, ExecuteCmdDto dto, CekokDbContext db, HttpContext ctx, ISshService ssh, IEncryptionService enc, CancellationToken ct) =>
         {
             var role = ctx.User.FindFirst(ClaimTypes.Role)?.Value;
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -429,7 +431,7 @@ public static class ServersController
         return group;
     }
 
-    private static async Task<string> TryRunCmd(SshService ssh, string ip, int port, string user, string pw, string cmd, CancellationToken ct)
+    private static async Task<string> TryRunCmd(ISshService ssh, string ip, int port, string user, string pw, string cmd, CancellationToken ct)
     {
         try
         {
@@ -441,12 +443,4 @@ public static class ServersController
             return "";
         }
     }
-
-    public record CreateServerDto(string Name, string Ip, int SshPort, string SshUser,
-        string SshPassword, string? SshSuPassword, string Role, string? Tags);
-
-    public record UpdateServerDto(string Name, string Ip, int SshPort, string SshUser,
-        string? SshPassword, string? SshSuPassword, string Role, string? Tags);
-
-    public record ExecuteCmdDto(string Command);
 }

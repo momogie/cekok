@@ -1,10 +1,10 @@
-using Cekok.Api.Services;
+using Cekok.Api.Services.Abstractions;
 using Hangfire;
 using Microsoft.Extensions.Logging;
 
 namespace Cekok.Api.Jobs;
 
-public class ScheduledDeployJob(DeployService deploySvc, ILogger<ScheduledDeployJob> logger)
+public class ScheduledDeployJob(IDeployService deploySvc, ILogger<ScheduledDeployJob> logger)
 {
     [AutomaticRetry(Attempts = 0)]
     public async Task ExecuteAsync(string appId, string[] allowedServerIds)

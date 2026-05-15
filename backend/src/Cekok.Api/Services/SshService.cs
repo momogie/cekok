@@ -1,9 +1,10 @@
+using Cekok.Api.Services.Abstractions;
 using Renci.SshNet;
 using System.Runtime.CompilerServices;
 
 namespace Cekok.Api.Services;
 
-public class SshService
+public class SshService : ISshService
 {
     public static AsyncLocal<string?> CurrentSuPassword { get; } = new();
     public async Task<(string Output, string Error, int ExitStatus)> RunCommandDetailedAsync(string host, int port, string user, string password,

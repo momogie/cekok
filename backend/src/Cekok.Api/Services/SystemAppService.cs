@@ -1,11 +1,12 @@
 using Cekok.Api.Data;
-using Cekok.Api.Models;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;
 
 namespace Cekok.Api.Services;
 
-public class SystemAppService(CekokDbContext db, SshService sshSvc, EncryptionService encSvc)
+public class SystemAppService(CekokDbContext db, ISshService sshSvc, IEncryptionService encSvc) : ISystemAppService
 {
     public async Task<Dictionary<string, string>> GetAllStatusesAsync(string serverId, CancellationToken ct)
     {

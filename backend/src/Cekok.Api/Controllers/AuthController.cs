@@ -1,5 +1,5 @@
-using Cekok.Api.Services;
-using Microsoft.AspNetCore.Mvc;
+using Cekok.Api.Dtos;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -10,19 +10,19 @@ public static class AuthController
 {
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder group)
     {
-        group.MapPost("/login", async (LoginRequest req, AuthService svc, CancellationToken ct) =>
+        group.MapPost("/login", async (LoginRequest req, IAuthService svc, CancellationToken ct) =>
         {
             var result = await svc.LoginAsync(req, ct);
             return result is null ? Results.Unauthorized() : Results.Ok(result);
         });
 
-        group.MapPost("/refresh", async (RefreshRequest req, AuthService svc, CancellationToken ct) =>
+        group.MapPost("/refresh", async (RefreshRequest req, IAuthService svc, CancellationToken ct) =>
         {
             var result = await svc.RefreshAsync(req, ct);
             return result is null ? Results.Unauthorized() : Results.Ok(result);
         });
 
-        group.MapPost("/logout", async (RefreshRequest req, AuthService svc, CancellationToken ct) =>
+        group.MapPost("/logout", async (RefreshRequest req, IAuthService svc, CancellationToken ct) =>
         {
             await svc.LogoutAsync(req.RefreshToken, ct);
             return Results.Ok();

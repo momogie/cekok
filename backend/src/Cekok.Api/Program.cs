@@ -1,16 +1,14 @@
 using Cekok.Api.Controllers;
 using Cekok.Api.Data;
-using Cekok.Api.Models;
+using Cekok.Api.Models.Entities;
+using Cekok.Api.Models.Enums;
 using Cekok.Api.Services;
+using Cekok.Api.Services.Abstractions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Serilog;
 using System.Text;
-using Yarp.ReverseProxy.Configuration;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,17 +45,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // ── Services ──
-builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<DeployService>();
-builder.Services.AddScoped<SshService>();
-builder.Services.AddScoped<ScpService>();
-builder.Services.AddScoped<BuildService>();
-builder.Services.AddScoped<NginxService>();
-builder.Services.AddScoped<SystemAppService>();
-builder.Services.AddScoped<EncryptionService>();
-builder.Services.AddScoped<HealthCheckService>();
-builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IDeployService, DeployService>();
+builder.Services.AddScoped<ISshService, SshService>();
+builder.Services.AddScoped<IScpService, ScpService>();
+builder.Services.AddScoped<IBuildService, BuildService>();
+builder.Services.AddScoped<INginxService, NginxService>();
+builder.Services.AddScoped<ISystemAppService, SystemAppService>();
+builder.Services.AddScoped<IEncryptionService, EncryptionService>();
+builder.Services.AddScoped<IHealthCheckService, HealthCheckService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddHostedService<TelegramBotWorker>();
 
 builder.Services.AddHttpClient();
