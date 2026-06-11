@@ -1,18 +1,5 @@
-// useAuth.ts — login, logout, refresh token composable
 import { defineStore } from 'pinia'
-
-interface User {
-  id: string
-  username: string
-  displayName: string
-  role: 'admin' | 'operator' | 'viewer'
-}
-
-interface AuthState {
-  user: User | null
-  accessToken: string | null
-  refreshToken: string | null
-}
+import type { User, AuthState } from '~/types'
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({

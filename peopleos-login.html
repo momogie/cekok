@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PeopleOS — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+
+:root{
+  --ac:#7b68ee;--ac2:#00d4aa;--ac3:#ff6b9d;--ac4:#ffb347;
+}
+[data-theme="dark"]{
+  --bg-body:#0a0a0e;
+  --bg-left:#0d0d12;
+  --bg-right:#0f0f14;
+  --bg-right-grad:radial-gradient(ellipse at 70% 30%,rgba(123,104,238,.06) 0%,transparent 60%);
+  --t1:#f0f0f5;--t2:rgba(255,255,255,.4);--tm:rgba(255,255,255,.2);
+  --bdr:rgba(255,255,255,.1);--bdr2:rgba(255,255,255,.08);
+  --fc-bg:rgba(255,255,255,.04);--fc-bdr:rgba(255,255,255,.08);
+  --inp-bg:rgba(255,255,255,.05);--inp-bg-focus:rgba(123,104,238,.07);
+  --inp-bdr:rgba(255,255,255,.1);
+  --sso-bg:rgba(255,255,255,.04);--sso-bg-h:rgba(255,255,255,.08);--sso-bdr:rgba(255,255,255,.1);--sso-bdr-h:rgba(255,255,255,.2);
+  --grid-line:rgba(123,104,238,.06);
+  --stat-v:#fff;--brand-t:#f0f0f5;
+  --err-bg:rgba(255,77,79,.1);--err-bdr:rgba(255,77,79,.25);--err-t:#ff6b6b;
+  --success-bg:#0f0f14;
+  --ver-c:rgba(255,255,255,.15);
+  --tog-bg:rgba(255,255,255,.07);--tog-bdr:rgba(255,255,255,.12);--tog-c:rgba(255,255,255,.5);--tog-h:rgba(255,255,255,.15);
+  --left-t1:#fff;--left-t2:rgba(255,255,255,.4);--left-tm:rgba(255,255,255,.3);
+  --left-sub:rgba(255,255,255,.35);--left-sep:rgba(255,255,255,.1);
+  --left-bar:rgba(255,255,255,.08);
+  --orb1:rgba(123,104,238,.18);--orb2:rgba(0,212,170,.12);--orb3:rgba(255,107,157,.1);
+  --success-sub:rgba(255,255,255,.35);
+}
+[data-theme="light"]{
+  --bg-body:#f0f0f8;
+  --bg-left:#1a1a2e;
+  --bg-right:#fff;
+  --bg-right-grad:radial-gradient(ellipse at 70% 30%,rgba(123,104,238,.05) 0%,transparent 60%);
+  --t1:#1a1a2e;--t2:rgba(26,26,46,.5);--tm:rgba(26,26,46,.3);
+  --bdr:rgba(26,26,46,.12);--bdr2:rgba(26,26,46,.07);
+  --fc-bg:rgba(255,255,255,.08);--fc-bdr:rgba(255,255,255,.15);
+  --inp-bg:rgba(26,26,46,.04);--inp-bg-focus:rgba(123,104,238,.06);
+  --inp-bdr:rgba(26,26,46,.15);
+  --sso-bg:rgba(26,26,46,.04);--sso-bg-h:rgba(26,26,46,.08);--sso-bdr:rgba(26,26,46,.12);--sso-bdr-h:rgba(26,26,46,.25);
+  --grid-line:rgba(123,104,238,.06);
+  --stat-v:#fff;--brand-t:#f0f0f5;
+  --err-bg:rgba(255,77,79,.07);--err-bdr:rgba(255,77,79,.2);--err-t:#d93025;
+  --success-bg:#fff;
+  --ver-c:rgba(26,26,46,.2);
+  --tog-bg:rgba(26,26,46,.06);--tog-bdr:rgba(26,26,46,.12);--tog-c:rgba(26,26,46,.45);--tog-h:rgba(26,26,46,.12);
+  --left-t1:#fff;--left-t2:rgba(255,255,255,.5);--left-tm:rgba(255,255,255,.35);
+  --left-sub:rgba(255,255,255,.45);--left-sep:rgba(255,255,255,.15);
+  --left-bar:rgba(255,255,255,.12);
+  --orb1:rgba(123,104,238,.22);--orb2:rgba(0,212,170,.16);--orb3:rgba(255,107,157,.14);
+  --success-sub:rgba(26,26,46,.4);
+}
+
+body{font-family:'DM Sans',sans-serif;background:var(--bg-body);color:var(--t1);font-size:14px}
+
+/* ── LAYOUT ── */
+.wrap{display:flex;height:100vh;width:100vw}
+
+/* ── LEFT PANEL ── */
+.left{flex:0 0 52%;position:relative;overflow:hidden;background:var(--bg-left);display:flex;flex-direction:column;justify-content:space-between;padding:40px}
+
+/* animated grid bg */
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:40px 40px;animation:gridMove 20s linear infinite}
+@keyframes gridMove{0%{background-position:0 0}100%{background-position:40px 40px}}
+
+/* glow orbs */
+.orb{position:absolute;border-radius:50%;filter:blur(80px);animation:pulse 6s ease-in-out infinite}
+.orb1{width:400px;height:400px;background:var(--orb1);top:-100px;left:-80px;animation-delay:0s}
+.orb2{width:300px;height:300px;background:var(--orb2);bottom:-80px;right:-60px;animation-delay:-3s}
+.orb3{width:200px;height:200px;background:var(--orb3);top:40%;left:40%;animation-delay:-1.5s}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.15);opacity:1}}
+
+/* floating cards */
+.cards{position:absolute;inset:0;pointer-events:none}
+.fc{position:absolute;background:var(--fc-bg);border:1px solid var(--fc-bdr);border-radius:14px;backdrop-filter:blur(8px);padding:14px 18px;animation:floatCard 8s ease-in-out infinite}
+.fc1{width:220px;top:18%;left:8%;animation-delay:0s}
+.fc2{width:190px;top:48%;right:8%;animation-delay:-2.5s}
+.fc3{width:200px;bottom:20%;left:15%;animation-delay:-5s}
+@keyframes floatCard{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.fc-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--left-tm);margin-bottom:8px}
+.fc-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.fc-av{width:22px;height:22px;border-radius:6px;flex-shrink:0}
+.fc-name{font-size:11px;font-weight:600;color:var(--left-t1)}
+.fc-sub{font-size:9.5px;color:var(--left-sub)}
+.fc-bar{height:4px;background:var(--left-bar);border-radius:2px;overflow:hidden;margin-top:4px}
+.fc-fill{height:100%;border-radius:2px;animation:fillBar 3s ease-in-out infinite alternate}
+.fc-stat{display:flex;justify-content:space-between;align-items:flex-end}
+.fc-num{font-size:22px;font-weight:800;color:var(--left-t1)}
+.fc-trend{font-size:10px;font-weight:700;color:#00d4aa;background:var(--orb2);padding:2px 7px;border-radius:10px}
+.fc-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:9.5px;font-weight:700}
+.pill-g{background:rgba(82,196,26,.15);color:#52c41a}
+.pill-y{background:rgba(255,179,71,.15);color:#ffb347}
+@keyframes fillBar{0%{width:45%}100%{width:78%}}
+
+/* left content */
+.left-content{position:relative;z-index:2}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:auto}
+.brand-m{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#7b68ee,#00d4aa);display:grid;place-items:center;font-size:16px;font-weight:800;color:var(--left-t1)}
+.brand-t{font-size:17px;font-weight:700;color:var(--brand-t)}
+.brand-t b{color:#7b68ee}
+
+.left-footer{position:relative;z-index:2}
+.tagline{font-size:30px;font-weight:800;line-height:1.2;color:var(--left-t1);margin-bottom:12px;letter-spacing:-.5px}
+.tagline em{font-style:normal;background:linear-gradient(90deg,#7b68ee,#00d4aa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sub{font-size:13px;color:var(--left-t2);line-height:1.6;max-width:360px}
+
+/* stats row */
+.stats{display:flex;gap:24px;margin-top:28px}
+.stat-item{display:flex;flex-direction:column;gap:2px}
+.stat-v{font-size:20px;font-weight:800;color:var(--stat-v)}
+.stat-l{font-size:10px;color:var(--left-tm);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.stat-sep{width:1px;background:var(--left-sep);align-self:stretch;margin:4px 0}
+
+/* ── RIGHT PANEL ── */
+.right{flex:1;background:var(--bg-right);display:flex;align-items:center;justify-content:center;padding:40px;position:relative;overflow:hidden}
+.right::before{content:'';position:absolute;inset:0;background:var(--bg-right-grad)}
+
+.form-wrap{width:100%;max-width:380px;position:relative;z-index:1}
+
+/* entry animation */
+.form-wrap{animation:slideUp .5s cubic-bezier(.22,.68,0,1.2) both}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+.f-eyebrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#7b68ee;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.f-eyebrow::before{content:'';width:18px;height:2px;background:#7b68ee;border-radius:1px}
+.f-title{font-size:26px;font-weight:800;color:#fff;margin-bottom:6px;letter-spacing:-.3px}
+.f-sub{font-size:12.5px;color:var(--t2);margin-bottom:32px}
+
+/* form fields */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--t2);margin-bottom:7px}
+.fi-wrap{position:relative}
+.fi-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.5;pointer-events:none;filter:grayscale(0)}
+.field input{width:100%;background:var(--inp-bg);border:1px solid var(--inp-bdr);border-radius:10px;padding:12px 13px 12px 40px;color:var(--t1);font-family:'DM Sans',sans-serif;font-size:13.5px;outline:none;transition:border-color .18s,background .18s}
+.field input::placeholder{color:var(--tm)}
+.field input:focus{border-color:var(--ac);background:var(--inp-bg-focus)}
+.field input:focus + .fi-ico,.fi-ico{pointer-events:none}
+/* password toggle */
+.pw-tog{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tm);font-size:15px;padding:0;font-family:inherit;transition:color .15s}
+.pw-tog:hover{color:var(--t1)}
+
+.field-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.remember{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--t2)}
+.remember input{accent-color:#7b68ee;width:14px;height:14px;cursor:pointer}
+.forgot{font-size:12px;color:#7b68ee;text-decoration:none;font-weight:600;transition:opacity .15s}
+.forgot:hover{opacity:.7}
+
+/* submit button */
+.btn-submit{width:100%;height:46px;background:linear-gradient(135deg,#7b68ee,#5d4ed6);border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;letter-spacing:.2px}
+.btn-submit::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.1),transparent);opacity:0;transition:opacity .2s}
+.btn-submit:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(123,104,238,.4)}
+.btn-submit:hover::before{opacity:1}
+.btn-submit:active{transform:translateY(0)}
+.btn-submit.loading{pointer-events:none}
+.btn-submit.loading .btn-txt{opacity:0}
+.btn-submit .spinner{position:absolute;inset:0;display:none;align-items:center;justify-content:center}
+.btn-submit.loading .spinner{display:flex}
+.spin{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* divider */
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--tm);font-size:11px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--bdr2)}
+
+/* SSO button */
+.btn-sso{width:100%;height:42px;background:var(--sso-bg);border:1px solid var(--sso-bdr);border-radius:10px;color:var(--tog-c);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:background .15s,border-color .15s}
+.btn-sso:hover{background:var(--sso-bg-h);border-color:var(--sso-bdr-h);color:var(--t1)}
+
+/* error msg */
+.err-msg{display:none;background:var(--err-bg);border:1px solid var(--err-bdr);border-radius:8px;padding:10px 13px;font-size:12px;color:var(--err-t);margin-bottom:16px;animation:shake .3s ease}
+.err-msg.show{display:flex;align-items:center;gap:8px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* success state */
+.success-overlay{position:absolute;inset:0;background:var(--bg-right);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:0;pointer-events:none;transition:opacity .3s;z-index:10}
+.success-overlay.show{opacity:1;pointer-events:auto}
+.success-ico{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,rgba(0,212,170,.2),rgba(0,212,170,.05));border:2px solid rgba(0,212,170,.4);display:grid;place-items:center;font-size:24px;animation:popIn .4s cubic-bezier(.22,.68,0,1.5) both;animation-delay:.1s}
+@keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+.success-ttl{font-size:17px;font-weight:700;color:var(--left-t1)}
+.success-sub{font-size:12px;color:var(--success-sub)}
+.success-bar{width:180px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-top:8px}
+.success-fill{height:100%;background:linear-gradient(90deg,#7b68ee,#00d4aa);border-radius:2px;width:0;transition:width 2s linear}
+
+.f-footer{margin-top:28px;text-align:center;font-size:11.5px;color:var(--tm)}
+.f-footer a{color:var(--t2);text-decoration:none;font-weight:600}
+
+/* version tag */
+.ver{position:absolute;bottom:20px;right:24px;font-family:'DM Mono',monospace;font-size:10px;color:var(--ver-c);letter-spacing:.5px}
+
+/* theme toggle */
+.theme-tog{position:absolute;top:20px;right:20px;z-index:10;background:var(--tog-bg);border:1px solid var(--tog-bdr);border-radius:8px;width:34px;height:34px;cursor:pointer;display:grid;place-items:center;font-size:16px;color:var(--tog-c);font-family:inherit;transition:background .15s,color .15s}
+.theme-tog:hover{background:var(--tog-h);color:var(--t1)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LEFT -->
+  <div class="left">
+    <div class="grid-bg"></div>
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+
+    <!-- floating cards -->
+    <div class="cards">
+      <!-- attendance card -->
+      <div class="fc fc1">
+        <div class="fc-label">Today's Attendance</div>
+        <div class="fc-stat">
+          <div>
+            <div class="fc-num">171</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">of 200 employees</div>
+          </div>
+          <div class="fc-trend">↑ 85.5%</div>
+        </div>
+        <div class="fc-bar" style="margin-top:10px"><div class="fc-fill" style="background:linear-gradient(90deg,#7b68ee,#00d4aa)"></div></div>
+      </div>
+
+      <!-- recent employees card -->
+      <div class="fc fc2">
+        <div class="fc-label">Recent Activity</div>
+        <div class="fc-row">
+          <div class="fc-av" style="background:linear-gradient(135deg,#7b68ee,#00d4aa)"></div>
+          <div><div class="fc-name">Siti Aminah</div><div class="fc-sub">Clocked in · 08:02</div></div>
+          <div class="fc-pill pill-g" style="margin-left:auto">In</div>
+        </div>
+        <div class="fc-row" style="margin-bottom:0">
+          <div class="fc-av" style="background:linear-gradient(135deg,#ff6b9d,#ffb347)"></div>
+          <div><div class="fc-name">Budi Rahayu</div><div class="fc-sub">On leave today</div></div>
+          <div class="fc-pill pill-y" style="margin-left:auto">Out</div>
+        </div>
+      </div>
+
+      <!-- payroll card -->
+      <div class="fc fc3">
+        <div class="fc-label">March Payroll</div>
+        <div class="fc-stat">
+          <div>
+            <div class="fc-num" style="font-size:18px">Rp 4.2B</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">Total disbursed</div>
+          </div>
+          <div class="fc-trend">✓ Processed</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="left-content">
+      <div class="brand">
+        <div class="brand-m">P</div>
+        <div class="brand-t">People<b>OS</b></div>
+      </div>
+    </div>
+
+    <div class="left-footer">
+      <div class="tagline">HR made<br><em>effortless.</em></div>
+      <div class="sub">Manage your entire workforce — from hiring to payroll — in one unified platform.</div>
+      <div class="stats">
+        <div class="stat-item"><div class="stat-v">200+</div><div class="stat-l">Employees</div></div>
+        <div class="stat-sep"></div>
+        <div class="stat-item"><div class="stat-v">10</div><div class="stat-l">Departments</div></div>
+        <div class="stat-sep"></div>
+        <div class="stat-item"><div class="stat-v">99.9%</div><div class="stat-l">Uptime</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right"><button class="theme-tog" id="btnTheme" title="Toggle theme">🌙</button>
+    <div class="form-wrap" id="formWrap">
+
+      <div class="f-eyebrow">Secure Access</div>
+      <div class="f-title">Welcome back</div>
+      <div class="f-sub">Sign in to your PeopleOS workspace</div>
+
+      <div class="err-msg" id="errMsg">
+        <span>⚠️</span>
+        <span id="errTxt">Invalid email or password.</span>
+      </div>
+
+      <div class="field">
+        <label>Email Address</label>
+        <div class="fi-wrap">
+          <input type="email" id="emailInp" placeholder="you@company.com" autocomplete="email">
+          <span class="fi-ico">✉</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="fi-wrap">
+          <input type="password" id="passInp" placeholder="Enter your password" autocomplete="current-password">
+          <span class="fi-ico">🔒</span>
+          <button class="pw-tog" id="pwTog" type="button">👁</button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label class="remember">
+          <input type="checkbox" id="remChk"> Keep me signed in
+        </label>
+        <a href="#" class="forgot">Forgot password?</a>
+      </div>
+
+      <button class="btn-submit" id="btnLogin">
+        <span class="btn-txt">Sign In</span>
+        <div class="spinner"><div class="spin"></div></div>
+      </button>
+
+      <div class="divider">or continue with</div>
+
+      <button class="btn-sso" id="btnSso">
+        <span style="font-size:16px">🏢</span>
+        <span>Single Sign-On (SSO)</span>
+      </button>
+
+      <div class="f-footer">
+        Having trouble? <a href="#">Contact IT Support</a>
+      </div>
+    </div>
+
+    <!-- success overlay -->
+    <div class="success-overlay" id="successOverlay">
+      <div class="success-ico">✓</div>
+      <div class="success-ttl">Signed in successfully</div>
+      <div class="success-sub">Redirecting to dashboard...</div>
+      <div class="success-bar"><div class="success-fill" id="successFill"></div></div>
+    </div>
+
+    <div class="ver">v2.4.1</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // password toggle
+  var pwTog = document.getElementById('pwTog');
+  var passInp = document.getElementById('passInp');
+  pwTog.addEventListener('click', function(){
+    var show = passInp.type === 'password';
+    passInp.type = show ? 'text' : 'password';
+    pwTog.textContent = show ? '🙈' : '👁';
+  });
+
+  // error helper
+  function showErr(msg){
+    var el = document.getElementById('errMsg');
+    document.getElementById('errTxt').textContent = msg;
+    el.classList.remove('show');
+    void el.offsetWidth; // reflow for shake re-trigger
+    el.classList.add('show');
+  }
+  function hideErr(){
+    document.getElementById('errMsg').classList.remove('show');
+  }
+
+  // login
+  var btn = document.getElementById('btnLogin');
+  function doLogin(){
+    var email = document.getElementById('emailInp').value.trim();
+    var pass  = document.getElementById('passInp').value;
+    hideErr();
+
+    if(!email){ showErr('Please enter your email address.'); return; }
+    if(!email.includes('@')){ showErr('Please enter a valid email address.'); return; }
+    if(!pass){ showErr('Please enter your password.'); return; }
+    if(pass.length < 4){ showErr('Invalid email or password.'); return; }
+
+    // loading state
+    btn.classList.add('loading');
+
+    setTimeout(function(){
+      btn.classList.remove('loading');
+
+      // demo: any email + pass >= 4 chars succeeds
+      var overlay = document.getElementById('successOverlay');
+      overlay.classList.add('show');
+      // animate progress bar
+      setTimeout(function(){
+        document.getElementById('successFill').style.width = '100%';
+      }, 50);
+      // redirect after 2s
+      setTimeout(function(){
+        alert('✓ Login successful!\n\nRedirecting to peopleos-shell.html...');
+        overlay.classList.remove('show');
+        btn.classList.remove('loading');
+      }, 2200);
+    }, 1400);
+  }
+
+  btn.addEventListener('click', doLogin);
+
+  // enter key
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') doLogin();
+  });
+
+  // clear error on input
+  document.getElementById('emailInp').addEventListener('input', hideErr);
+  document.getElementById('passInp').addEventListener('input', hideErr);
+
+  // SSO
+  document.getElementById('btnSso').addEventListener('click', function(){
+    showErr('SSO is not configured for this workspace.');
+  });
+
+  // forgot
+  document.querySelector('.forgot').addEventListener('click', function(e){
+    e.preventDefault();
+    alert('Password reset link will be sent to your email.');
+  });
+
+  // theme toggle
+  var _theme = 'dark';
+  document.getElementById('btnTheme').addEventListener('click', function(){
+    _theme = _theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', _theme);
+    this.textContent = _theme === 'dark' ? '🌙' : '☀️';
+  });
+})();
+</script>
+</body>
+</html>

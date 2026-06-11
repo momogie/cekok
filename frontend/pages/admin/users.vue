@@ -69,110 +69,22 @@
       </div>
     </div>
 
-    <!-- Create/Edit User Drawer -->
-    <div v-if="drawer.show" class="drawer-overlay" @click.self="drawer.show = false">
-      <div class="drawer">
-        <div class="drawer-header">
-          <div class="drawer-title">{{ drawer.mode === 'create' ? 'Add New User' : 'Edit User' }}</div>
-          <button class="btn-icon" @click="drawer.show = false">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l10 10M3 13L13 3"/></svg>
-          </button>
-        </div>
-        <div class="drawer-content">
-          <div class="form-group" v-if="drawer.mode === 'create'">
-            <label>Username</label>
-            <input v-model="drawer.form.username" placeholder="john.doe" />
-          </div>
-          <div class="form-group">
-            <label>Display Name</label>
-            <input v-model="drawer.form.displayName" placeholder="John Doe" />
-          </div>
-          <div class="form-group" v-if="drawer.mode === 'create'">
-            <label>Password</label>
-            <input v-model="drawer.form.password" type="password" placeholder="••••••••" />
-          </div>
-          <div class="form-group" v-if="drawer.mode === 'edit'">
-            <label>New Password (leave blank to keep current)</label>
-            <div class="input-with-action">
-              <input v-model="drawer.form.newPassword" type="password" placeholder="••••••••" />
-              <button class="btn btn-sm" @click="resetPassword" :disabled="!drawer.form.newPassword">Reset</button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Role</label>
-            <select v-model="drawer.form.role">
-              <option value="admin">Admin (Full Access)</option>
-              <option value="operator">Operator (Manage Apps/Servers)</option>
-              <option value="viewer">Viewer (Read Only)</option>
-            </select>
-          </div>
-          <div class="form-group checkbox">
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="drawer.form.isActive" />
-              <span>Allow user to login (Active)</span>
-            </label>
-          </div>
-        </div>
-        <div class="drawer-footer">
-          <button class="btn btn-ghost" @click="drawer.show = false">Cancel</button>
-          <button class="btn btn-primary" :disabled="saving" @click="saveUser">
-            {{ saving ? 'Saving...' : (drawer.mode === 'create' ? 'Create User' : 'Save Changes') }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Server Access Drawer -->
-    <div v-if="accessDrawer.show" class="drawer-overlay" @click.self="accessDrawer.show = false">
-      <div class="drawer wide">
-        <div class="drawer-header">
-          <div class="drawer-title">Server Access: {{ accessDrawer.user.displayName }}</div>
-          <button class="btn-icon" @click="accessDrawer.show = false">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l10 10M3 13L13 3"/></svg>
-          </button>
-        </div>
-        <div class="drawer-content">
-          <div class="access-list">
-            <table class="access-table">
-              <thead>
-                <tr>
-                  <th>Server</th>
-                  <th class="center">Can Deploy</th>
-                  <th class="center">Can Manage</th>
-                  <th class="center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="server in servers" :key="server.id">
-                  <td>
-                    <div class="server-info">
-                      <span class="server-name">{{ server.name }}</span>
-                      <span class="server-ip">{{ server.ip }}</span>
-                    </div>
-                  </td>
-                  <td class="center">
-                    <input type="checkbox" v-model="getServerAccess(server.id).canDeploy" />
-                  </td>
-                  <td class="center">
-                    <input type="checkbox" v-model="getServerAccess(server.id).canManage" />
-                  </td>
-                  <td class="center">
-                    <button class="btn btn-sm btn-ghost" v-if="isAccessGranted(server.id)" @click="revokeAccess(server.id)">Revoke</button>
-                    <span v-else class="status-dim">Not Granted</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="drawer-footer">
-          <button class="btn btn-ghost" @click="accessDrawer.show = false">Cancel</button>
-          <button class="btn btn-primary" :disabled="savingAccess" @click="saveAccess">
-            {{ savingAccess ? 'Saving...' : 'Update Permissions' }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <UserFormDrawer
+      v-model:show="drawer.show"
+      :mode="drawer.mode"
+      v-model:form="drawer.form"
+      :saving="saving"
+      @save="saveUser"
+      @reset-password="resetPassword"
+    />
+    <UserAccessDrawer
+      v-model:show="accessDrawer.show"
+      :user="accessDrawer.user"
+      v-model:accesses="accessDrawer.accesses"
+      :servers="servers"
+      :saving-access="savingAccess"
+      @save-access="saveAccess"
+    />
   </div>
 </template>
 
@@ -343,28 +255,6 @@ const openAccessDrawer = async (user) => {
   }
 }
 
-const getServerAccess = (serverId) => {
-  let access = accessDrawer.value.accesses.find(a => a.serverId === serverId)
-  if (!access) {
-    access = { serverId, canDeploy: false, canManage: false, isNew: true }
-    accessDrawer.value.accesses.push(access)
-  }
-  return access
-}
-
-const isAccessGranted = (serverId) => {
-  const access = accessDrawer.value.accesses.find(a => a.serverId === serverId)
-  return access && !access.isNew
-}
-
-const revokeAccess = (serverId) => {
-  const idx = accessDrawer.value.accesses.findIndex(a => a.serverId === serverId)
-  if (idx !== -1) {
-    accessDrawer.value.accesses[idx].canDeploy = false
-    accessDrawer.value.accesses[idx].canManage = false
-  }
-}
-
 const saveAccess = async () => {
   savingAccess.value = true
   try {
@@ -472,67 +362,14 @@ const getAvatarStyle = (name) => {
 .status-indicator.active { color: var(--accent); }
 .status-indicator.active::before { background: var(--accent); }
 
-/* Drawer Styles */
-.drawer-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
-  display: flex; justify-content: flex-end; z-index: 100;
-}
-.drawer {
-  width: 400px; background: var(--bg1); height: 100%;
-  display: flex; flex-direction: column; box-shadow: -4px 0 24px rgba(0,0,0,0.2);
-  animation: slideIn 0.3s ease-out;
-}
-.drawer.wide { width: 600px; }
-@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-
-.drawer-header {
-  padding: 16px 20px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.drawer-title { font-size: 14px; font-weight: 600; }
-
-.drawer-content { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
-
-.drawer-footer {
-  padding: 16px 20px; border-top: 1px solid var(--border);
-  display: flex; justify-content: flex-end; gap: 12px;
-}
-
-.form-group { display: flex; flex-direction: column; gap: 8px; }
-.form-group label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
-.form-group input, .form-group select {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
-  padding: 10px 12px; color: var(--text1); font-size: 13px; outline: none; transition: border 0.2s;
-}
-.form-group input:focus, .form-group select:focus { border-color: var(--accent); }
-
-.input-with-action { display: flex; gap: 8px; }
-.input-with-action input { flex: 1; }
-
-.checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
-.checkbox-label span { font-size: 13px; color: var(--text2); }
-
-.access-table { width: 100%; border-collapse: collapse; }
-.access-table th { text-align: left; padding: 12px; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; border-bottom: 1px solid var(--border); }
-.access-table td { padding: 12px; font-size: 13px; border-bottom: 1px solid var(--border); }
-.access-table th.center, .access-table td.center { text-align: center; }
-
-.server-info { display: flex; flex-direction: column; }
-.server-name { font-weight: 500; color: var(--text1); }
-.server-ip { font-size: 11px; color: var(--text3); font-family: var(--font-mono); }
-
-.status-dim { font-size: 11px; color: var(--text3); font-style: italic; }
-
 .btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500;
   cursor: pointer; transition: all 0.2s; border: none; white-space: nowrap;
 }
-.btn-sm { padding: 4px 10px; font-size: 11px; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
 .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
 .btn-ghost:hover { background: var(--bg2); color: var(--text1); }
 
@@ -546,8 +383,4 @@ const getAvatarStyle = (name) => {
 
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-@media (max-width: 600px) {
-  .drawer { width: 100%; }
-}
 </style>

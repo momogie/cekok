@@ -1,17 +1,5 @@
-// useServers.ts — simple composable to fetch server list
 import { defineStore } from 'pinia'
-
-export interface ServerSummary {
-  id: string
-  name: string
-  ip: string
-  sshPort: number
-  role: string
-  hostname?: string
-  tags?: string
-  nginxInstalled: boolean
-  createdAt: string
-}
+import type { ServerSummary } from '~/types'
 
 export const useServersStore = defineStore('servers', {
   state: () => ({

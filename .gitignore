@@ -19,6 +19,8 @@ frontend/dist/
 # Build artifacts
 /tmp/cekok-builds/
 
+/project-ref
+
 # OS
 .DS_Store
 Thumbs.db

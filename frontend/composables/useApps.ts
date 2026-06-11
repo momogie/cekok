@@ -1,47 +1,5 @@
 import { defineStore } from 'pinia'
-
-export interface EnvVar {
-  key: string
-  val: string
-}
-
-export interface Application {
-  id: string
-  name: string
-  type: string
-  repoUrl: string
-  branch: string
-  buildCmd?: string
-  outputDir?: string
-  trigger: string
-  // tokenEnc is never exposed to frontend
-  envVars?: string // JSON serialized EnvVar[]
-  deployDir?: string
-  serviceName?: string
-  port?: number
-  scheduleCron?: string
-  scheduleEnabled: boolean
-  createdAt: string
-}
-
-export interface DeployJob {
-  id: string
-  appId: string
-  status: string
-  triggeredBy: string // manual | schedule | webhook
-  triggeredByUser?: string // userId
-  commitHash?: string
-  commitMsg?: string
-  createdAt: string
-  startedAt?: string
-  finishedAt?: string
-}
-
-export interface DeployLog {
-  timestamp: string
-  message: string
-  level: string
-}
+import type { Application, DeployJob, DeployLog } from '~/types'
 
 export const useAppsStore = defineStore('apps', {
   state: () => ({
